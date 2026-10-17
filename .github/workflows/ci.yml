@@ -36,7 +36,9 @@ jobs:
           python -m json.tool src/recommendations.json >/dev/null
           python -m json.tool src/frontend/locales/de.json >/dev/null
           python -m json.tool src/frontend/locales/en.json >/dev/null
-          python scripts/generate-locales.py --check
+          python -m json.tool src/frontend/locales/pt.json >/dev/null
+          # Beni Launcher: src/frontend/state.js já vem preenchido (não é mais modelo),
+          # então a checagem generate-locales.py --check do original não se aplica.
 
       - name: Check shell syntax
         run: bash -n scripts/install.sh scripts/update.sh scripts/deploy.sh scripts/wsl/setup-test-env.sh scripts/wsl/check-mpv-resume.sh scripts/wsl/check-vlc-resume.sh scripts/wsl/run-gui-smoke.sh src/launcher.sh
