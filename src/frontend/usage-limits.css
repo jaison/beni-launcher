@@ -1,0 +1,49 @@
+/* Medidores de tempo por categoria (tela da criança) + painel dos pais.
+   Os "pills" usam a classe .smallbtn para herdar fonte/borda/cores de cada tema. */
+#usageMeters {
+  position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+  display:flex; gap:var(--space-3,12px); pointer-events:none; max-width:calc(100vw - 420px);
+}
+#usageMeters[hidden] { display:none; }
+.usage-pill.smallbtn {
+  cursor:default; min-width:0; min-height:var(--control-height,54px);
+  padding:0 16px; gap:10px; white-space:nowrap; justify-content:flex-start;
+}
+.usage-pill .usage-emoji { font-size:1.6rem; line-height:1; }
+.usage-pill .usage-text { display:flex; flex-direction:column; gap:4px; align-items:stretch; min-width:96px; }
+.usage-pill .usage-name { font-size:.95rem; font-weight:800; line-height:1.05; }
+.usage-pill .usage-bar {
+  display:block; height:10px; border-radius:6px; overflow:hidden;
+  background:color-mix(in srgb, var(--text) 16%, transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+}
+.usage-pill .usage-fill { display:block; height:100%; border-radius:6px; transition:width .6s ease; background:#43a047; }
+.usage-pill.usage-warn .usage-fill { background:#f9a825; }
+.usage-pill.usage-low .usage-fill, .usage-pill.usage-out .usage-fill { background:#e53935; }
+.usage-pill .usage-count { font-size:1rem; font-weight:800; font-variant-numeric:tabular-nums; }
+.usage-pill.usage-low .usage-count, .usage-pill.usage-out .usage-count { color:#d32f2f; }
+.usage-pill.usage-out { opacity:.85; }
+body.theme-ninja .usage-pill.usage-low .usage-count, body.theme-ninja .usage-pill.usage-out .usage-count { color:#ff6b6b !important; }
+@media (max-width: 900px) {
+  #usageMeters { max-width:calc(100vw - 260px); gap:6px; }
+  .usage-pill .usage-name { display:none; }
+  .usage-pill .usage-text { min-width:56px; }
+}
+@media (prefers-reduced-motion: reduce) { .usage-pill .usage-fill { transition:none; } }
+
+/* Mensagem amigável quando o tempo acaba */
+#usageMessage .timerbox { max-width:560px; text-align:center; }
+#usageMessage h2 { font-size:clamp(1.6rem,3.4vw,2.3rem); }
+#usageMessage p { font-size:1.35rem; font-weight:700; margin:0 0 18px; }
+#usageMessage .emoji { font-size:4rem; }
+#usageMessageOk { font-size:1.3rem; min-width:160px; }
+
+/* Painel dos pais */
+.usage-limit-panel { margin-top:var(--space-5,20px); }
+.usage-limit-fields { display:grid; gap:var(--space-2,8px); margin-top:var(--space-3,12px); }
+.usage-limit-row { display:grid; grid-template-columns:minmax(140px,220px) 120px auto; align-items:center; gap:var(--space-3,12px); font-weight:700; }
+.usage-limit-row input { width:100%; }
+.usage-today-row { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-3,12px); margin-top:var(--space-3,12px); }
+.usage-tile-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:6px 16px; margin-top:var(--space-2,8px); max-height:320px; overflow:auto; padding-right:4px; }
+.usage-tile-row { display:grid; grid-template-columns:1fr 170px; align-items:center; gap:8px; font-size:.92rem; }
+.usage-tile-row.usage-tile-hidden { opacity:.6; }

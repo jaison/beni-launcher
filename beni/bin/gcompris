@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: abre o GCompris novo (Flathub), em tela cheia, só com atividades para 8 anos+.
+exec flatpak run org.kde.gcompris -f --difficulty 3-6

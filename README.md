@@ -1,106 +1,165 @@
-# Cozy Kids Launcher
+# Beni Launcher
 
-[![Latest release](https://img.shields.io/github/v/release/TrissyGE/cozy-kids-launcher?display_name=tag&sort=semver)](https://github.com/TrissyGE/cozy-kids-launcher/releases/latest)
-[![CI](https://github.com/TrissyGE/cozy-kids-launcher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TrissyGE/cozy-kids-launcher/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform: Linux](https://img.shields.io/badge/platform-Linux-fcc624?logo=linux&logoColor=black)](docs/INSTALL.md)
+Um menu infantil em tela cheia para notebooks antigos com Linux, pensado para crianças de 5 a 8 anos.
+Ao ligar o notebook, a criança vê **"O que você quer fazer? 📚 Aprender / 🎮 Jogar"**, escolhe, e só
+encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário por categoria**.
 
-**Turn an old Linux laptop into a friendly learning and media PC for kids—without taking the normal desktop away from parents.**
+![Tela inicial](beni/prints/01-escolha-bea.png)
 
-Cozy Kids Launcher is a local-first, fullscreen home screen with large tiles, parent settings, screen-time controls, themes, and unified launching for apps, websites, music, and videos. There is no account, cloud dependency, subscription, or locked-down replacement operating system.
+> **Este projeto é uma adaptação do [Cozy Kids Launcher](https://github.com/TrissyGE/cozy-kids-launcher)**,
+> criado por Tristan e colaboradores (licença MIT). Todo o núcleo, como o servidor local, a
+> supervisão dos apps, o botão ❌ por cima dos jogos, os perfis, o PIN dos pais e os horários,
+> vem de lá. Este repositório parte da versão **0.6.0** (commit `91b7157`), mantém o histórico
+> original e acrescenta as mudanças descritas abaixo, feitas para preparar dois notebooks antigos
+> para duas crianças brasileiras (Beni, 8 anos, e Bea, 5 anos).
+> O README original está em [README.original.md](README.original.md).
 
-[Install](#quick-start) · [Features](#highlights) · [Documentation](#documentation) · [Contribute](CONTRIBUTING.md)
+---
 
-![Cozy Kids Launcher home screen](screenshots/screenshot-home-default.png)
+## O que mudou em relação ao original
 
-## Quick start
+### Para as crianças
+- **Tela inicial "Aprender / Jogar"**: cartões grandes, cada um com uma barrinha e "faltam 18 min". A lista mostra só a categoria escolhida, com botão **⬅ Voltar** (ou Esc). Quando a categoria esgota, o cartão fica cinza com 🔒 "Amanhã tem mais!".
+- **Limite de tempo diário por categoria**: por exemplo, 60 min por dia, sendo 30 de jogos e 30 de atividades educativas.
+  - Medidores verde/amarelo/vermelho no launcher e o tempo restante ao lado do ❌ durante o jogo.
+  - Nos **10 segundos finais** aparece uma contagem grande ("Seu tempo de jogos está acabando! 8…"), com a sugestão do que ainda dá para fazer ("Você ainda pode brincar de Aprender (18 min)").
+  - O tempo continua contando certo mesmo depois de reiniciar o notebook e zera à meia-noite.
+- **6 temas novos**, com arte original em SVG (nenhum personagem ou logo de marca):
+  - meninos: **Herói Aranha** (quadrinhos), **Blocos de Montar** e **Dojo Ninja**;
+  - meninas: **Reino do Gelo**, **Casinha Mágica** e **Castelo Encantado**, com letras grandes e redondas para quem ainda está aprendendo a ler.
+- **Interface toda em português do Brasil**: a tela das crianças e toda a área dos pais (novo idioma `pt`).
+- **Apps melhores**:
+  - GCompris e Tux Paint em versões novas (Flathub);
+  - Scratch (TurboWarp), Luanti (parecido com Minecraft), Klavaro (digitação), Klotski, Pingus, Hex-a-hop, SuperTux, Frogatto e Stellarium;
+  - sites educativos em português (Code.org, Khan Academy, PhET, Blockly Games, Escola Games);
+  - jogos de vestir/maquiagem/boneca sem anúncios (itch.io).
+- **Super Nintendo e PlayStation**: uma lista de jogos em tela cheia, com capas, que funciona com teclado, mouse ou controle. Usa RetroArch + snes9x e PCSX-Reloaded. Os jogos (ROMs) não vêm incluídos.
+- **Jogos de navegador em tela cheia de verdade**: os jogos do itch.io são ampliados até ocupar a tela, a faixa do Unity com o botão "tela cheia" é escondida e uma tela "Carregando…" cobre a abertura, para não aparecer a área de trabalho piscando.
 
-On Ubuntu, Linux Mint, Zorin OS, or another modern desktop Linux:
+### Para os pais
+- **Coleções do itch.io**: cada criança tem uma coleção pública no itch.io. Jogo que você adiciona na coleção vira ícone, com a capa, no perfil da criança, e jogo removido some. A sincronização roda no login e a cada 30 min. Os pais testam o jogo antes e só então distribuem.
+- Em Pais → Tempo de tela → **Limite diário por categoria** você define os minutos, escolhe a categoria de cada app e zera o tempo do dia.
+- Em Pais → Aparência → **Tela inicial** você liga ou desliga a pergunta Aprender/Jogar em cada perfil.
+- A prévia da aparência mostra o visual dos temas novos e as capas dos jogos.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/TrissyGE/cozy-kids-launcher/main/scripts/install.sh | bash
+### Correções para notebooks antigos e jogos "rebeldes"
+| Problema | Solução |
+|---|---|
+| Nenhum app abria (o ❌ por cima falhava) | `python3-tk` passa a ser instalado |
+| GCompris não abria (`gcompris` × `gcompris-qt`) | atalho `beni/bin/gcompris` |
+| TuxMath, Pingus etc. **prendiam o mouse** e o ❌ não funcionava | `nograb.so` (LD_PRELOAD) anula o "prender mouse" do SDL 1.2/SDL2 |
+| SuperTuxKart trocava a resolução e **a tela ficava apagada** ao fechar | os atalhos sempre usam a resolução atual da tela |
+| Apps que abrem em janela (Scratch, Klavaro, Klotski) | `cozy-fullscreen` coloca em tela cheia via `wmctrl` |
+| Ctrl+Alt+Del bloqueava a tela, e ao voltar ficava preta | atalho e bloqueios automáticos desligados |
+| Barra do Linux aparecia ao abrir jogos | painéis do XFCE escondidos (aparecem com o mouse na borda) |
+| Linha vertical piscando no launcher (F7 do Firefox) | navegação com cursor desligada |
+| Esc numa mensagem de "tempo acabou" saía do modo infantil | agora Esc só fecha a mensagem |
+| Jogos 3D de navegador lentos no Firefox | jogos de navegador abrem no Chromium com aceleração forçada (≈2× mais FPS neste hardware) |
+
+A lista detalhada, arquivo por arquivo, está em [beni/MUDANCAS.md](beni/MUDANCAS.md).
+
+---
+
+## Ambiente em que foi feito e testado
+
+| | |
+|---|---|
+| Notebook | Samsung RV419/RV420 (≈2011) |
+| Processador | Intel Celeron B800 1.5 GHz, 2 núcleos |
+| Memória | 2,8 GB |
+| Vídeo | Intel HD Graphics 2000 (Sandy Bridge), OpenGL 3.3 (Mesa 25.0) |
+| Tela | 1366×768 |
+| Rede | Atheros AR9285 (só Wi-Fi, **sem Bluetooth**) |
+| Sistema | **Linux Mint 22.3 "Zena" XFCE** (base Ubuntu 24.04), kernel 6.14, sessão X11 |
+| Navegadores | Firefox 146 (launcher e sites) · Chromium 155 via Flathub (jogos de navegador) |
+| Python | 3.12 |
+
+**Requisitos:** Linux Mint XFCE ou outra distro baseada em Ubuntu 24.04 com XFCE, sessão **X11**
+(não Wayland), internet na instalação e um usuário comum para a criança, com login automático.
+Em Mint Cinnamon/MATE quase tudo funciona, mas os ajustes de barra/bloqueio são específicos do XFCE.
+
+---
+
+## Instalação num notebook novo
+
+1. Instale o **Linux Mint XFCE**, crie o usuário e ative o **login automático**.
+2. Baixe este repositório e rode o instalador **como o usuário da criança** (sem `sudo`; ele pede a senha quando precisa):
+   ```bash
+   git clone https://github.com/jaison/beni-launcher.git
+   cd beni-launcher
+   ./instalar.sh
+   ```
+   São uns 2–3 GB de downloads: apps do Flathub, Chromium e emuladores.
+3. Saia da sessão e entre de novo. O launcher abre sozinho.
+4. **Antes de entregar** para a criança:
+   - **Pais → Sistema: crie o PIN dos pais.** Sem PIN, qualquer um entra no painel, sai do modo infantil ou zera o tempo.
+   - Ajuste nomes, temas e limites em Pais. A configuração inicial traz dois perfis de exemplo, com os apps já separados em Jogos/Aprender.
+   - Luanti: abra uma vez e instale o jogo **Mineclonia** (Conteúdo → Procurar).
+   - Coloque seus jogos de SNES/PS1 em `~/Jogos/SNES` e `~/Jogos/PS1`. A BIOS do PS1 vai em `~/Jogos/PS1/BIOS` (veja `~/Jogos/LEIA-ME.txt`).
+   - Troque as coleções do itch.io em `~/.config/cozy-kids-launcher/itch-colecoes.json`. O arquivo liga o **id do perfil** à URL pública da coleção.
+
+Rodar `./instalar.sh` de novo atualiza os arquivos e **não apaga** a configuração nem os jogos.
+Use `./instalar.sh --sem-apps` para atualizar só o launcher, sem apt/flatpak.
+
+---
+
+## Como funciona (resumo técnico)
+
+```
+login → ~/.config/autostart → cozy-iniciar
+          ├─ cozy-itch-sync      (lê as coleções do itch.io → tiles "itch-*" no config.json)
+          └─ cozy-kids-launcher  (servidor Python em 127.0.0.1:38431 + Firefox em modo quiosque)
+                 └─ tocar num ícone → process_supervisor.py + overlay.py (❌ e tempo restante)
+                        ├─ apps locais: atalhos em ~/.local/bin (tuxpaint, supertux, …)
+                        ├─ sites: Firefox em modo quiosque
+                        └─ jogos de navegador: navegador-jogos → Chromium em modo quiosque
+                               → cozy-jogo.html (amplia o jogo) + carregando.py (tela de espera)
 ```
 
-Log out and back in. The launcher then starts automatically. Python 3 and either Firefox or a Chromium-based browser are required; the installer checks the environment and explains missing dependencies.
-
-See the [installation guide](docs/INSTALL.md) for language, browser, launch-mode, manual-install, and troubleshooting options.
-
-## Highlights
-
-- **Made for kids:** fullscreen interface, large touch-friendly tiles, keyboard navigation, multiple pages, and 4- or 9-tile layouts
-- **Made for parents:** optional PIN, editable and reorderable tiles, configuration import/export and restore, an opt-in local activity overview, privacy-safe diagnostics, desktop exit, and safe shutdown
-- **Apps and media:** one consistent launch path for Linux apps, exact-origin-bounded embedded websites, and a local cover library with per-child favorites, recents, and isolated MPV/VLC resume state
-- **Screen time:** timer controls, weekly and per-app schedules, remaining-time overlay, warning state, and PIN-protected block screens
-- **Personal:** German and English interfaces, color themes, gently animated illustrated worlds, optional local time-of-day tinting, local sounds and Linux speech feedback, a brief unscored celebration option, combinable accessibility presets, and a custom theme
-- **Local-first:** configuration and browser profiles stay on the device
-- **Safe updates:** immutable GitHub Releases, SHA-256 verification, downgrade protection, rollback, and compatibility with legacy installations
-
-## More screenshots
-
-| Child profile picker | Local media library |
+| Onde | O quê |
 |---|---|
-| ![Three local child profiles](screenshots/screenshot-profile-picker.png) | ![Local cover library with favorites and recents](screenshots/screenshot-media-library.png) |
+| `src/` | código do launcher (original + mudanças) → `~/.local/share/cozy-kids-launcher` |
+| `src/usage_limits.py`, `src/frontend/usage-limits.*` | limites por categoria |
+| `src/frontend/escolha.*` | tela Aprender/Jogar |
+| `src/frontend/cozy-temas.css`, `themes/*.svg`, `themes/fonts/` | temas novos |
+| `src/frontend/locales/pt.json` | tradução |
+| `beni/bin/` | atalhos dos apps, `cozy-itch-sync`, `navegador-jogos`, `cozy-iniciar` … → `~/.local/bin` |
+| `beni/lib/cozy-fixes/` | `nograb.c` (compilado na instalação) e `carregando.py` |
+| `beni/cozy-jogos/jogos.py` | lista de jogos SNES/PS1 |
+| `beni/chromium/cozy-jogo.html` | moldura que amplia jogos de navegador |
+| `beni/config/` | configuração inicial (perfis, apps, categorias, limites) e coleções do itch.io |
+| `beni/emuladores/` | configurações do RetroArch, PCSX-R e Luanti para hardware fraco |
+| `beni/systemd/` | timer da sincronização do itch.io |
+| `beni/ferramentas/` | scripts que geram os SVG dos temas |
 
-| Private activity overview | Child profile management |
+O código ainda usa os nomes internos do original (`cozy-kids-launcher`, porta 38431, pastas em
+`~/.local/share/cozy-kids-launcher`). Assim fica fácil comparar com o projeto original e trazer
+correções de lá.
+
+### Testes
+Os 277 testes automáticos do projeto original passam (`python3 -m unittest discover -s tests`).
+Três testes foram ajustados ao comportamento novo: textos já traduzidos no `index.html` e o campo
+`limitBlocked` na resposta de disponibilidade.
+
+---
+
+## Limitações conhecidas
+- Jogos de navegador demoram 10 a 50 s para abrir num Celeron. Jogos 3D pesados (alguns do Universo Rabisco) ficam abaixo de 10 FPS e foram escondidos.
+- O emulador de PS1 (PCSX-R) é antigo. O core `pcsx_rearmed` do RetroArch seria melhor, mas não está nos repositórios do Ubuntu.
+- O `src/index.html` (e outros arquivos com textos) deste repositório já vem "renderizado" em pt-BR, não é mais um modelo com `{{…}}`. O `scripts/install.sh` original continua funcionando (foi ajustado para copiar os arquivos novos), mas o caminho recomendado é o `instalar.sh`.
+- Sem PIN configurado, a área dos pais fica aberta.
+- ROMs comerciais não são fornecidas. Use cópias dos seus próprios discos/cartuchos ou jogos homebrew.
+
+## Créditos e licenças
+- **[Cozy Kids Launcher](https://github.com/TrissyGE/cozy-kids-launcher)** © 2026 Tristan e colaboradores, **licença MIT**. Ela continua valendo para todo o código ([LICENSE](LICENSE)). As mudanças deste fork são publicadas sob a mesma licença.
+- Fontes dos temas (Bangers, Bungee, Shojumaru, Fredoka): SIL Open Font License, veja [themes/fonts/LEIA-ME.md](themes/fonts/LEIA-ME.md).
+- Os apps e jogos instalados (GCompris, Tux Paint, TurboWarp, Luanti, SuperTux…) e os jogos do itch.io pertencem aos seus autores e só são baixados das fontes oficiais.
+- Adaptação feita com a ajuda do Claude (Anthropic) via Claude Code.
+
+## Galeria
+| | |
 |---|---|
-| ![Opt-in local activity overview](screenshots/screenshot-admin-general.png) | ![Parent settings for separate child profiles](screenshots/screenshot-admin-children.png) |
-
-| Weekly and per-app schedules | Feedback and accessibility |
-|---|---|
-| ![Parent settings for weekly and per-app schedules](screenshots/screenshot-admin-screen-time.png) | ![Appearance settings with audio feedback, celebrations, and accessibility presets](screenshots/screenshot-admin-appearance.png) |
-
-| Illustrated world theme | Theme picker |
-|---|---|
-| ![Ocean theme](screenshots/screenshot-home-world.png) | ![Theme picker](screenshots/screenshot-theme-picker.png) |
-
-The screenshots use a clean, generated demo profile. Maintainers can recreate them with `python3 scripts/take-screenshots.py`; see the [screenshot guide](docs/SCREENSHOTS.md).
-
-## How it fits together
-
-```text
-Kids UI in the browser
-        │ localhost only
-        ▼
-Python launcher server ──► Linux apps / websites / VLC or MPV
-        │
-        ├──► parent session, settings, timer
-        └──► local JSON configuration and release updater
-```
-
-The launcher is plain Python, HTML, CSS, JavaScript, and shell—there is no framework build step. Read the [architecture overview](docs/ARCHITECTURE.md) for the runtime and security boundaries.
-
-## Documentation
-
-| Guide | Purpose |
-|---|---|
-| [Installation](docs/INSTALL.md) | Install options, requirements, and troubleshooting |
-| [Privacy and safety](docs/PRIVACY.md) | Local-first behavior and parent considerations |
-| [Architecture](docs/ARCHITECTURE.md) | Components, data flow, and file locations |
-| [Lifecycle](docs/LIFECYCLE.md) | Startup, logout, shutdown, update, and recovery states |
-| [Development](docs/DEVELOPMENT.md) | Checks, WSLg testing, and manual smoke tests |
-| [Desktop testing](docs/DESKTOP_TESTING.md) | Repeatable GNOME, KDE Plasma, and XFCE release matrix |
-| [Display behavior](docs/DISPLAY_BEHAVIOR.md) | X11/Wayland focus, overlay, and kiosk guarantees |
-| [Branching](docs/BRANCHING.md) | Branch responsibilities and pull-request flow |
-| [Releasing](docs/RELEASING.md) | Versioning, immutable artifacts, and updater compatibility |
-| [Roadmap](docs/ROADMAP.md) | Completed work and future ideas |
-| [Changelog](CHANGELOG.md) | Published changes |
-
-## Development
-
-Everyday work targets `develop`; `main` is reserved for the exact commit of the latest stable release because legacy updaters consume it directly.
-
-```bash
-git switch develop
-git switch -c feature/short-description
-python3 -m unittest discover -s tests -v
-```
-
-Open feature, fix, and documentation pull requests against `develop`. The complete branch lifecycle, including releases and hotfixes, is defined in [docs/BRANCHING.md](docs/BRANCHING.md); setup and review expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Mission
-
-Every family should be able to turn existing hardware into a simple, joyful learning computer without surrendering privacy or buying another device.
-
-## License
-
-[MIT](LICENSE)
+| ![Temas do Beni](beni/prints/04-temas-beni.jpg) | ![Temas da Bea](beni/prints/05-temas-bea.jpg) |
+| ![Lista de jogos](beni/prints/03-lista-jogos.png) | ![Contagem final](beni/prints/06-contagem-final.png) |
+| ![Área dos pais](beni/prints/07-area-dos-pais.png) | ![Jogo do itch.io em tela cheia](beni/prints/09-jogo-itch-tela-cheia.png) |
+| ![Jogos de vestir](beni/prints/10-jogos-vestir.jpg) | ![Apps](beni/prints/11-apps.jpg) |

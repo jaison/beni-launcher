@@ -113,7 +113,11 @@ from runtime_diagnostics import (
     configure_runtime_logging,
     log_runtime_event,
 )
-from schedule_rules import availability_summary, tile_availability
+from schedule_rules import (
+    availability_summary as schedule_availability_summary,
+    tile_availability as schedule_tile_availability,
+)
+from usage_limits import UsageTracker, tile_category as usage_tile_category
 from speech_feedback import SpeechFeedback
 from timer_state import (
     clear_timer as remove_timer_state,
@@ -133,7 +137,7 @@ from update_manager import (
 )
 
 HOME = os.path.expanduser("~")
-APP_ROOT = os.path.join(HOME, ".local", "share", "{{APP_ID}}")
+APP_ROOT = os.path.join(HOME, ".local", "share", "cozy-kids-launcher")
 VERSION_FILE = os.path.join(APP_ROOT, "version")
 UPDATE_SCRIPT = os.path.join(APP_ROOT, "update.sh")
 UPDATE_CHANNEL_FILE = os.path.join(APP_ROOT, "update-channel")
@@ -146,32 +150,32 @@ LEGACY_RAW_URL = os.environ.get(
     "https://raw.githubusercontent.com/TrissyGE/cozy-kids-launcher/main",
 ).rstrip("/")
 LEGACY_VERSION_URL = f"{LEGACY_RAW_URL}/VERSION"
-CFG = os.path.join(HOME, ".config", "{{APP_ID}}", "config.json")
-BACKUP_ROOT = os.path.join(HOME, ".local", "share", "{{APP_ID}}-backups")
-LOG_FILE = os.path.join(HOME, ".local", "state", "{{APP_ID}}", "runtime.jsonl")
-ACTIVITY_FILE = os.path.join(HOME, ".local", "state", "{{APP_ID}}", "activity.json")
-MEDIA_STATE_FILE = os.path.join(HOME, ".local", "state", "{{APP_ID}}", "media.json")
+CFG = os.path.join(HOME, ".config", "cozy-kids-launcher", "config.json")
+BACKUP_ROOT = os.path.join(HOME, ".local", "share", "cozy-kids-launcher-backups")
+LOG_FILE = os.path.join(HOME, ".local", "state", "cozy-kids-launcher", "runtime.jsonl")
+ACTIVITY_FILE = os.path.join(HOME, ".local", "state", "cozy-kids-launcher", "activity.json")
+MEDIA_STATE_FILE = os.path.join(HOME, ".local", "state", "cozy-kids-launcher", "media.json")
 MEDIA_RESUME_ROOT = os.path.join(
     HOME,
     ".local",
     "state",
-    "{{APP_ID}}",
+    "cozy-kids-launcher",
     "media-resume",
 )
 MEDIA_SESSION_SCRIPT = os.path.join(APP_ROOT, "media_session.py")
-PORT = int(os.environ.get("COZY_KIDS_PORT", "{{DEFAULT_PORT}}"))
-PIDFILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "server.pid")
-BROWSER_PIDFILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "browser.pid")
-TILE_PROCESS_PIDFILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "tile-process.pid")
-OVERLAY_PIDFILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "overlay.pid")
+PORT = int(os.environ.get("COZY_KIDS_PORT", "38431"))
+PIDFILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "server.pid")
+BROWSER_PIDFILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "browser.pid")
+TILE_PROCESS_PIDFILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "tile-process.pid")
+OVERLAY_PIDFILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "overlay.pid")
 PROCESS_SUPERVISOR = os.path.join(APP_ROOT, "process_supervisor.py")
 OVERLAY_SCRIPT = os.path.join(APP_ROOT, "overlay.py")
-EXIT_FLAGFILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "exit-requested")
-LIFECYCLE_STATE_FILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "lifecycle.json")
+EXIT_FLAGFILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "exit-requested")
+LIFECYCLE_STATE_FILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "lifecycle.json")
 LIFECYCLE_REQUEST_FILE = os.path.join(
     HOME,
     ".cache",
-    "{{APP_ID}}",
+    "cozy-kids-launcher",
     "lifecycle-request.json",
 )
 RECOMMENDATIONS_FILE = os.path.join(APP_ROOT, "recommendations.json")
@@ -187,7 +191,8 @@ LEGACY_WEB_ACTION_MIGRATIONS = {
     "special:browser:https://www.kika.de":
         "special:external-browser:https://www.kika.de",
 }
-TIMER_FILE = os.path.join(HOME, ".cache", "{{APP_ID}}", "timer.json")
+TIMER_FILE = os.path.join(HOME, ".cache", "cozy-kids-launcher", "timer.json")
+USAGE_FILE = os.path.join(HOME, ".local", "state", "cozy-kids-launcher", "usage-today.json")
 MAX_JSON_BODY_BYTES = 512 * 1024
 _tile_launch_lock = threading.Lock()
 _activity_sessions_lock = threading.Lock()
@@ -538,7 +543,7 @@ def find_browser(config=None):
 
 
 def external_browser_command(browser, url):
-    cache_root = os.path.join(HOME, ".cache", "{{APP_ID}}")
+    cache_root = os.path.join(HOME, ".cache", "cozy-kids-launcher")
     return build_external_browser_command(browser, url, cache_root)
 
 
@@ -584,6 +589,82 @@ def start_overlay(mode, url="", tile_id=""):
 def reset_active_tile():
     embedded_activity_sessions().finish_all()
     application_launcher().reset_active_tile()
+    usage_tracker().clear_active()
+
+
+# --- Limites diários por categoria -------------------------------------
+_usage_lock = threading.Lock()
+_usage_tracker = None
+_profiles_cache = {"mtime": None, "profiles": {}}
+
+
+def stored_profiles_cached():
+    """Perfis armazenados, relidos só quando o config.json muda (CPU fraca)."""
+    try:
+        mtime = os.stat(CFG).st_mtime_ns
+    except OSError:
+        return _profiles_cache["profiles"]
+    if mtime != _profiles_cache["mtime"]:
+        try:
+            stored = load_stored_cfg()
+            _profiles_cache["profiles"] = {
+                p.get("id"): p for p in stored.get("profiles", []) if isinstance(p, dict)
+            }
+            _profiles_cache["mtime"] = mtime
+        except (OSError, ValueError):
+            pass
+    return _profiles_cache["profiles"]
+
+
+def _tile_alive():
+    return owned_process_alive(TILE_PROCESS_PIDFILE, "tile-process", PROCESS_SUPERVISOR)
+
+
+def _stop_tile_for_limit():
+    log_runtime_event("usage.limit.enforced")
+    embedded_activity_sessions().finish_all()
+    application_launcher().reset_active_tile()
+
+
+def usage_tracker():
+    global _usage_tracker
+    with _usage_lock:
+        if _usage_tracker is None:
+            _usage_tracker = UsageTracker(
+                USAGE_FILE,
+                stored_profiles_cached,
+                _tile_alive,
+                _stop_tile_for_limit,
+            )
+        return _usage_tracker
+
+
+def usage_status(cfg):
+    profile_id = cfg.get("activeProfileId", "")
+    profile = stored_profiles_cached().get(profile_id) or cfg
+    return usage_tracker().status(profile_id, profile)
+
+
+def tile_availability(cfg, tile_id, when=None):
+    result = schedule_tile_availability(cfg, tile_id, when=when)
+    if not result["allowed"]:
+        return result
+    reason = usage_status(cfg).get("blockedReasons", {}).get(tile_id)
+    if reason:
+        return {"allowed": False, "reason": reason}
+    return result
+
+
+def availability_summary(cfg, when=None):
+    summary = schedule_availability_summary(cfg, when=when)
+    usage = usage_status(cfg)
+    blocked = list(summary.get("blockedTileIds", []))
+    for tile_id in usage.get("blockedTileIds", []):
+        if tile_id not in blocked:
+            blocked.append(tile_id)
+    summary["blockedTileIds"] = blocked
+    summary["limitBlocked"] = usage.get("blockedReasons", {})
+    return summary
 
 
 def launch_owned_tile(
@@ -594,7 +675,7 @@ def launch_owned_tile(
     profile_id="",
     track_activity=False,
 ):
-    return application_launcher().launch_owned_tile(
+    process = application_launcher().launch_owned_tile(
         command,
         mode,
         url=url,
@@ -602,6 +683,13 @@ def launch_owned_tile(
         profile_id=profile_id,
         track_activity=track_activity,
     )
+    profile = stored_profiles_cached().get(profile_id) or {}
+    usage_tracker().set_active(
+        profile_id,
+        tile_id,
+        usage_tile_category(profile, tile_id),
+    )
+    return process
 
 
 def load_timer():
@@ -819,6 +907,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.json_response(timer_status(load_cfg()))
         if self.path == "/api/availability/status":
             return self.json_response(availability_summary(load_cfg()))
+        if request_url.path == "/api/usage/status":
+            cfg = load_cfg()
+            # O overlay informa o tile aberto; isso permite retomar a contagem
+            # se o servidor reiniciar com um app ainda aberto.
+            tile_id = parse_qs(request_url.query).get("tile", [""])[0]
+            if tile_id and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", tile_id):
+                usage_tracker().adopt(
+                    cfg.get("activeProfileId", ""),
+                    tile_id,
+                    usage_tile_category(
+                        stored_profiles_cached().get(cfg.get("activeProfileId", "")) or cfg,
+                        tile_id,
+                    ),
+                    _tile_alive,
+                )
+            return self.json_response(usage_status(cfg))
         if self.path == "/api/activity":
             stored = load_stored_cfg()
             data = active_config(stored)
@@ -1366,6 +1470,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             # Shutdown the HTTP server so launcher.sh exits cleanly
             threading.Thread(target=self.server.shutdown, daemon=True).start()
             return
+        if action == "api/usage/reset":
+            cfg = load_cfg()
+            if not self.require_admin(cfg):
+                return
+            body = self.read_json_body(required=False)
+            if body is None:
+                return
+            profile_id = body.get("profileId") if isinstance(body, dict) else None
+            if profile_id is not None and not (
+                isinstance(profile_id, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", profile_id)
+            ):
+                self.json_response({"status": "error", "message": "Invalid profile"}, 400)
+                return
+            usage_tracker().reset(profile_id)
+            log_runtime_event("usage.reset")
+            self.json_response({"status": "ok"})
+            return
         if action == "api/timer/start":
             cfg = load_cfg()
             if not self.require_admin(cfg):
@@ -1636,6 +1757,7 @@ def main():
                 marker=server_marker,
             )
             log_runtime_event("server.started", version=get_version())
+            usage_tracker().start()
             try:
                 recovery_attempt = int(
                     os.environ.get("COZY_KIDS_RECOVERY_ATTEMPT", "0")
@@ -1657,6 +1779,8 @@ def main():
         raise
     finally:
         embedded_activity_sessions().finish_all()
+        if _usage_tracker is not None:
+            _usage_tracker.shutdown()
         if _speech_feedback is not None:
             _speech_feedback.close()
         remove_process_record(PIDFILE, expected_pid=os.getpid())

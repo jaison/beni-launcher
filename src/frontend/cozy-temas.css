@@ -1,0 +1,241 @@
+/* Temas extras do Cozy Kids Launcher: Herói Aranha, Blocos de Montar e Dojo Ninja.
+   Arte original (sem personagens nem logos de marcas). Fundos em /themes/*.svg. */
+
+@font-face { font-family:'Bangers'; src:url('/themes/fonts/Bangers-Regular.ttf') format('truetype'); font-display:swap; }
+@font-face { font-family:'Bungee'; src:url('/themes/fonts/Bungee-Regular.ttf') format('truetype'); font-display:swap; }
+@font-face { font-family:'Shojumaru'; src:url('/themes/fonts/Shojumaru-Regular.ttf') format('truetype'); font-display:swap; }
+
+/* ---------- Fundos ---------- */
+body.theme-heroi #themeBg { background-image:url('/themes/heroi.svg'); opacity:1; }
+body.theme-blocos #themeBg { background-image:url('/themes/blocos.svg'); opacity:1; }
+body.theme-ninja #themeBg { background-image:url('/themes/ninja.svg'); opacity:1; }
+.launcher-preview.theme-heroi { background:url('/themes/heroi.svg') center/cover; }
+.launcher-preview.theme-blocos { background:url('/themes/blocos.svg') center/cover; }
+.launcher-preview.theme-ninja { background:url('/themes/ninja.svg') center/cover; }
+
+/* ---------- HERÓI ARANHA: quadrinhos, vermelho e azul ---------- */
+body.theme-heroi, .launcher-preview.theme-heroi {
+  --bg1:#0b1a4a; --bg2:#14205e; --card:#ffffff; --text:#0b1f4b;
+  --shadow:8px 8px 0 #c8102e; --btn:#c8102e; --btn-text:#fff;
+  --smallbtn-bg:#ffffff; --input-border:#1d3c8f; --rec-shadow:rgba(0,0,0,.25);
+}
+body.theme-heroi h1 {
+  font-family:'Bangers',system-ui,sans-serif; letter-spacing:.06em; font-weight:400;
+  font-size:clamp(2.6rem,6vw,4.4rem); color:#fff;
+  text-shadow:3px 3px 0 #c8102e, 6px 6px 0 #0a0a0a; transform:rotate(-2deg);
+}
+body.theme-heroi .tile {
+  font-family:'Bangers',system-ui,sans-serif; font-weight:400; letter-spacing:.05em;
+  text-transform:uppercase; border:4px solid #0a0a0a; border-radius:6px;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(29,60,143,.13) 1.6px, transparent 2px) 0 0/10px 10px,
+    linear-gradient(160deg,#ffffff 0%,#eef3ff 100%);
+  box-shadow:8px 8px 0 #c8102e, 8px 8px 0 4px #0a0a0a;
+}
+body.theme-heroi .grid.gross .tile { font-size:clamp(1.6rem,3vw,2.4rem); }
+body.theme-heroi .grid .tile:nth-child(even) { box-shadow:8px 8px 0 #1d3c8f, 8px 8px 0 4px #0a0a0a; }
+body.theme-heroi .tile:hover { transform:scale(1.04) rotate(-1.5deg); box-shadow:12px 12px 0 #c8102e, 12px 12px 0 4px #0a0a0a; }
+body.theme-heroi .tile .local-tile-icon { color:#c8102e; }
+body.theme-heroi .tile.focused { outline:5px solid #ffd34d; outline-offset:6px; }
+body.theme-heroi .smallbtn, body.theme-heroi .nav, body.theme-heroi #clockBadge {
+  border:3px solid #0a0a0a !important; box-shadow:4px 4px 0 #c8102e !important;
+  font-family:'Bangers',system-ui,sans-serif; letter-spacing:.05em; font-weight:400; font-size:1.05rem;
+}
+
+/* ---------- BLOCOS DE MONTAR: peças com pinos ---------- */
+body.theme-blocos, .launcher-preview.theme-blocos {
+  --bg1:#2e9e48; --bg2:#2e9e48; --card:#d42a2f; --text:#222222;
+  --shadow:0 10px 0 rgba(0,0,0,.28); --btn:#f9c80e; --btn-text:#222;
+  --smallbtn-bg:#f9c80e; --input-border:#1565c0; --rec-shadow:rgba(0,0,0,.2);
+  --brick:#d42a2f; --brick-dark:#8e1418;
+}
+body.theme-blocos h1 {
+  font-family:'Bungee',system-ui,sans-serif; font-weight:400; font-size:clamp(2.2rem,5vw,3.8rem);
+  color:#f9c80e; -webkit-text-stroke:2px #222; text-shadow:0 6px 0 #222;
+  background:rgba(0,0,0,.18); padding:4px 26px; border-radius:14px;
+}
+body.theme-blocos .tile {
+  font-family:'Bungee',system-ui,sans-serif; font-weight:400; color:#fff;
+  text-shadow:0 3px 0 rgba(0,0,0,.35); border-radius:8px; overflow:visible;
+  background:var(--brick);
+  box-shadow: inset 0 -10px 0 var(--brick-dark), inset 0 4px 0 rgba(255,255,255,.28), 0 10px 0 rgba(0,0,0,.25);
+  margin-top:18px; height:calc(100% - 18px);
+}
+body.theme-blocos .tile::before {
+  content:''; position:absolute; top:-18px; left:8%; right:8%; height:20px; pointer-events:none;
+  background:
+    radial-gradient(ellipse 22px 9px at 50% 30%, rgba(255,255,255,.45) 0 40%, transparent 42%) 0 0/25% 100%,
+    linear-gradient(var(--brick),var(--brick)) 0 0/25% 100%;
+  -webkit-mask: radial-gradient(ellipse 34px 30px at 50% 100%, #000 0 60%, transparent 62%) 0 0/25% 100%;
+          mask: radial-gradient(ellipse 34px 30px at 50% 100%, #000 0 60%, transparent 62%) 0 0/25% 100%;
+  filter:drop-shadow(0 -2px 0 rgba(0,0,0,.15));
+}
+body.theme-blocos .grid .tile:nth-child(4n+1) { --brick:#d42a2f; --brick-dark:#8e1418; }
+body.theme-blocos .grid .tile:nth-child(4n+2) { --brick:#1565c0; --brick-dark:#0b3a75; }
+body.theme-blocos .grid .tile:nth-child(4n+3) { --brick:#f9c80e; --brick-dark:#b58900; color:#222; text-shadow:0 2px 0 rgba(255,255,255,.4); }
+body.theme-blocos .grid .tile:nth-child(4n+4) { --brick:#ff7a00; --brick-dark:#b04f00; }
+body.theme-blocos .tile .local-tile-icon { color:currentColor; }
+body.theme-blocos .tile:hover { transform:translateY(-6px); }
+body.theme-blocos .tile:active { transform:translateY(4px); box-shadow: inset 0 -4px 0 var(--brick-dark), 0 4px 0 rgba(0,0,0,.25); }
+body.theme-blocos .tile.focused { outline:5px solid #fff; outline-offset:5px; }
+body.theme-blocos .smallbtn, body.theme-blocos .nav, body.theme-blocos #clockBadge {
+  font-family:'Bungee',system-ui,sans-serif; font-weight:400; font-size:.9rem; color:#222 !important;
+  background:#f9c80e !important; border-radius:8px !important; box-shadow:inset 0 -5px 0 #b58900, 0 5px 0 rgba(0,0,0,.25) !important;
+}
+
+/* ---------- DOJO NINJA: escuro com dourado ---------- */
+body.theme-ninja, .launcher-preview.theme-ninja {
+  --bg1:#03140f; --bg2:#0b3326; --card:rgba(6,24,18,.86); --text:#1b3a2c;
+  --shadow:0 0 0 2px #b8860b, 0 14px 34px rgba(0,0,0,.55); --btn:#e53935; --btn-text:#fff;
+  --smallbtn-bg:rgba(6,24,18,.9); --input-border:#b8860b; --rec-shadow:rgba(0,0,0,.4);
+}
+body.theme-ninja h1 {
+  font-family:'Shojumaru',system-ui,sans-serif; font-weight:400; font-size:clamp(2.2rem,5vw,3.8rem);
+  background:linear-gradient(180deg,#fff3b0,#f4c542 55%,#b8860b); -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(2px 0 0 #1a1200) drop-shadow(-2px 0 0 #1a1200) drop-shadow(0 2px 0 #1a1200) drop-shadow(0 -2px 0 #1a1200) drop-shadow(0 5px 0 #000);
+}
+body.theme-ninja .tile {
+  font-family:'Shojumaru',system-ui,sans-serif; font-weight:400; color:#f4c542; letter-spacing:.03em;
+  border-radius:4px; border:2px solid #b8860b;
+  background:
+    linear-gradient(135deg,transparent 0 14px,#b8860b 14px 16px,transparent 16px) top left/40px 40px no-repeat,
+    linear-gradient(225deg,transparent 0 14px,#b8860b 14px 16px,transparent 16px) top right/40px 40px no-repeat,
+    linear-gradient(45deg,transparent 0 14px,#b8860b 14px 16px,transparent 16px) bottom left/40px 40px no-repeat,
+    linear-gradient(315deg,transparent 0 14px,#b8860b 14px 16px,transparent 16px) bottom right/40px 40px no-repeat,
+    linear-gradient(180deg,rgba(14,61,43,.92),rgba(3,20,15,.92));
+  box-shadow:0 14px 34px rgba(0,0,0,.55), inset 0 0 30px rgba(244,197,66,.08);
+}
+body.theme-ninja .tile .local-tile-icon { color:#f4c542; }
+body.theme-ninja .tile:hover { transform:scale(1.04); box-shadow:0 0 0 2px #f4c542, 0 0 28px rgba(76,175,80,.55), 0 14px 34px rgba(0,0,0,.55); }
+body.theme-ninja .tile.focused { outline:3px solid #e53935; outline-offset:6px; }
+body.theme-ninja .smallbtn, body.theme-ninja .nav, body.theme-ninja #clockBadge {
+  font-family:'Shojumaru',system-ui,sans-serif; font-weight:400; font-size:.85rem;
+  color:#f4c542 !important; background:rgba(6,24,18,.9) !important; border:2px solid #b8860b !important;
+}
+
+/* O painel dos pais e as janelas usam o texto escuro; só a tela da criança usa as cores fortes. */
+body.theme-ninja #admin .smallbtn, body.theme-ninja .pinbox .smallbtn, body.theme-ninja .install-overlay .smallbtn { color:#f4c542 !important; }
+body.theme-blocos #admin .smallbtn { color:#222 !important; }
+
+/* =====================================================================
+   Temas da Bea (5 anos): Reino do Gelo, Casinha Mágica, Castelo Encantado
+   Fonte bem redonda (Fredoka) e letras grandes.
+   ===================================================================== */
+@font-face { font-family:'Fredoka'; src:url('/themes/fonts/Fredoka.ttf') format('truetype'); font-weight:300 700; font-display:swap; }
+body.theme-gelo #themeBg { background-image:url('/themes/gelo.svg'); opacity:1; }
+body.theme-casinha #themeBg { background-image:url('/themes/casinha.svg'); opacity:1; }
+body.theme-castelo #themeBg { background-image:url('/themes/castelo.svg'); opacity:1; }
+.launcher-preview.theme-gelo { background:url('/themes/gelo.svg') center/cover; }
+.launcher-preview.theme-casinha { background:url('/themes/casinha.svg') center/cover; }
+.launcher-preview.theme-castelo { background:url('/themes/castelo.svg') center/cover; }
+
+body.theme-gelo .tile, body.theme-casinha .tile, body.theme-castelo .tile,
+body.theme-gelo h1, body.theme-casinha h1, body.theme-castelo h1,
+body.theme-gelo .smallbtn, body.theme-casinha .smallbtn, body.theme-castelo .smallbtn,
+body.theme-gelo #clockBadge, body.theme-casinha #clockBadge, body.theme-castelo #clockBadge {
+  font-family:'Fredoka',system-ui,sans-serif; font-weight:600;
+}
+body.theme-gelo .grid.gross .tile, body.theme-casinha .grid.gross .tile, body.theme-castelo .grid.gross .tile { font-size:clamp(1.6rem,3vw,2.3rem); }
+body.theme-gelo .grid.gross .emoji, body.theme-casinha .grid.gross .emoji, body.theme-castelo .grid.gross .emoji { font-size:4.6rem; }
+body.theme-gelo h1, body.theme-casinha h1, body.theme-castelo h1 { font-weight:700; font-size:clamp(2.6rem,6vw,4.4rem); }
+
+/* ---------- REINO DO GELO ---------- */
+body.theme-gelo, .launcher-preview.theme-gelo {
+  --bg1:#1b2a6b; --bg2:#9fb8ff; --card:rgba(255,255,255,.82); --text:#1f3a8a;
+  --shadow:0 0 0 3px #ffffff, 0 12px 30px rgba(31,58,138,.35); --btn:#3d7bff; --btn-text:#fff;
+  --smallbtn-bg:rgba(255,255,255,.9); --input-border:#9fc3ff; --rec-shadow:rgba(31,58,138,.12);
+}
+body.theme-gelo h1 { color:#ffffff; text-shadow:0 0 18px #9fd8ff, 0 0 4px #5aa9ff, 0 4px 0 #3d5bd1; }
+body.theme-gelo .tile {
+  border-radius:32px; border:3px solid #ffffff; color:#1f3a8a;
+  background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(214,236,255,.88) 60%,rgba(190,214,255,.88));
+  box-shadow:0 0 0 4px rgba(159,216,255,.55), 0 14px 30px rgba(31,58,138,.35), inset 0 0 24px rgba(159,216,255,.6);
+}
+body.theme-gelo .tile::before { content:'❄'; position:absolute; top:10px; right:18px; font-size:1.6rem; color:#7fb8ff; opacity:.9; }
+body.theme-gelo .tile .local-tile-icon { color:#3d7bff; }
+body.theme-gelo .tile:hover { transform:scale(1.04); box-shadow:0 0 0 6px #ffffff, 0 0 30px #9fd8ff, 0 14px 30px rgba(31,58,138,.35); }
+body.theme-gelo .tile.focused { outline:5px solid #ffffff; outline-offset:6px; }
+body.theme-gelo .smallbtn, body.theme-gelo .nav, body.theme-gelo #clockBadge { color:#1f3a8a !important; border:3px solid #fff !important; box-shadow:0 0 14px rgba(159,216,255,.8) !important; }
+
+/* ---------- CASINHA MÁGICA ---------- */
+body.theme-casinha, .launcher-preview.theme-casinha {
+  --bg1:#ffd1ec; --bg2:#e9d5ff; --card:#ffffff; --text:#7a1f5c;
+  --shadow:0 8px 0 rgba(122,31,92,.18); --btn:#ff6fae; --btn-text:#fff;
+  --smallbtn-bg:#ffffff; --input-border:#ffb3d9; --rec-shadow:rgba(122,31,92,.1);
+  --room:#ffb3d9; --room-dark:#e55b98;
+}
+body.theme-casinha h1 { color:#ff4f9a; -webkit-text-stroke:2px #ffffff; text-shadow:0 5px 0 #ffffff, 0 8px 14px rgba(155,123,255,.45);
+  background:rgba(255,255,255,.75); border-radius:999px; padding:2px 34px; }
+body.theme-casinha .tile {
+  border-radius:26px; border:6px solid #ffffff; color:#5a1748; background:var(--room);
+  box-shadow:0 8px 0 var(--room-dark), 0 14px 26px rgba(122,31,92,.22);
+  margin-top:26px; height:calc(100% - 26px);
+}
+body.theme-casinha .tile::before {
+  content:''; position:absolute; left:50%; top:-34px; width:96px; height:40px; transform:translateX(-50%);
+  background:var(--room-dark); clip-path:polygon(50% 0,100% 100%,0 100%); pointer-events:none;
+}
+body.theme-casinha .grid .tile:nth-child(4n+1) { --room:#ffc6e2; --room-dark:#ff6fae; }
+body.theme-casinha .grid .tile:nth-child(4n+2) { --room:#dccdff; --room-dark:#9b7bff; }
+body.theme-casinha .grid .tile:nth-child(4n+3) { --room:#bff3e3; --room-dark:#3fc79f; }
+body.theme-casinha .grid .tile:nth-child(4n+4) { --room:#fff0b8; --room-dark:#f2b72e; }
+body.theme-casinha .tile .local-tile-icon { color:var(--room-dark); }
+body.theme-casinha .tile:hover { transform:scale(1.04) rotate(-1deg); }
+body.theme-casinha .tile.focused { outline:5px dashed #ff4f9a; outline-offset:6px; }
+body.theme-casinha .smallbtn, body.theme-casinha .nav, body.theme-casinha #clockBadge { color:#7a1f5c !important; border:4px solid #ffb3d9 !important; border-radius:999px !important; }
+
+/* ---------- CASTELO ENCANTADO ---------- */
+body.theme-castelo, .launcher-preview.theme-castelo {
+  --bg1:#ffb3d1; --bg2:#fff0d6; --card:#fffaf3; --text:#6b2a7a;
+  --shadow:0 0 0 3px #f4c542, 0 12px 28px rgba(142,68,214,.25); --btn:#c77dff; --btn-text:#fff;
+  --smallbtn-bg:#fffaf3; --input-border:#f4c542; --rec-shadow:rgba(142,68,214,.12);
+}
+body.theme-castelo h1 {
+  background:linear-gradient(180deg,#d65db1,#8e44d6); -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 3px 0 #ffffff) drop-shadow(0 0 10px rgba(255,255,255,.9));
+}
+body.theme-castelo .tile {
+  border-radius:30px; color:#6b2a7a;
+  background:linear-gradient(180deg,#fffdf8,#ffeef7);
+  border:4px solid #f4c542; box-shadow:0 0 0 6px #ffffff, 0 0 0 9px #f9b6d6, 0 14px 30px rgba(142,68,214,.28);
+}
+body.theme-castelo .tile::before { content:'👑'; position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:2rem; filter:drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+body.theme-castelo .tile .local-tile-icon { color:#c77dff; }
+body.theme-castelo .tile:hover { transform:scale(1.04); box-shadow:0 0 0 6px #ffffff, 0 0 0 9px #f4c542, 0 0 30px rgba(255,214,102,.8); }
+body.theme-castelo .tile.focused { outline:5px solid #c77dff; outline-offset:10px; }
+body.theme-castelo .smallbtn, body.theme-castelo .nav, body.theme-castelo #clockBadge { color:#6b2a7a !important; border:3px solid #f4c542 !important; }
+
+/* Capas de jogos (itch.io) no lugar do emoji */
+.tile .tile-cover { width:auto; height:58%; max-width:86%; object-fit:contain; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+.grid.klein .tile .tile-cover { height:52%; }
+
+/* ---------- Prévia (Pais > Aparência) ---------- */
+.preview-tile .tile-cover { width:auto; height:44px; max-width:80%; object-fit:contain; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+.preview-launcher-grid.klein .preview-tile .tile-cover { height:32px; }
+.preview-tile { overflow:hidden; }
+.launcher-preview [class*="preview-title"], .launcher-preview h3 { font-weight:700; }
+
+/* Herói Aranha */
+.launcher-preview.theme-heroi .preview-tile { font-family:'Bangers',system-ui,sans-serif; letter-spacing:.04em; text-transform:uppercase;
+  background:#fff; color:#0b1f4b; border:3px solid #0a0a0a; border-radius:4px; box-shadow:4px 4px 0 #c8102e; }
+.launcher-preview.theme-heroi .preview-tile-label { font-weight:400; font-size:.95rem; }
+/* Blocos */
+.launcher-preview.theme-blocos .preview-tile { font-family:'Bungee',system-ui,sans-serif; color:#fff; border:0; border-radius:6px;
+  background:#d42a2f; box-shadow:inset 0 -6px 0 #8e1418; }
+.launcher-preview.theme-blocos .preview-tile:nth-child(4n+2) { background:#1565c0; box-shadow:inset 0 -6px 0 #0b3a75; }
+.launcher-preview.theme-blocos .preview-tile:nth-child(4n+3) { background:#f9c80e; box-shadow:inset 0 -6px 0 #b58900; color:#222; }
+.launcher-preview.theme-blocos .preview-tile:nth-child(4n+4) { background:#ff7a00; box-shadow:inset 0 -6px 0 #b04f00; }
+.launcher-preview.theme-blocos .preview-tile-label { font-weight:400; }
+/* Ninja */
+.launcher-preview.theme-ninja .preview-tile { font-family:'Shojumaru',system-ui,sans-serif; color:#f4c542; border:2px solid #b8860b; border-radius:3px;
+  background:linear-gradient(180deg,rgba(14,61,43,.94),rgba(3,20,15,.94)); }
+.launcher-preview.theme-ninja .preview-tile-label { font-weight:400; }
+/* Gelo, Casinha, Castelo */
+.launcher-preview.theme-gelo .preview-tile, .launcher-preview.theme-casinha .preview-tile, .launcher-preview.theme-castelo .preview-tile { font-family:'Fredoka',system-ui,sans-serif; }
+.launcher-preview.theme-gelo .preview-tile { color:#1f3a8a; border:2px solid #fff; border-radius:16px;
+  background:linear-gradient(160deg,rgba(255,255,255,.95),rgba(200,224,255,.9)); box-shadow:0 0 0 3px rgba(159,216,255,.5); }
+.launcher-preview.theme-casinha .preview-tile { color:#5a1748; border:4px solid #fff; border-radius:14px; background:#ffc6e2; }
+.launcher-preview.theme-casinha .preview-tile:nth-child(4n+2) { background:#dccdff; }
+.launcher-preview.theme-casinha .preview-tile:nth-child(4n+3) { background:#bff3e3; }
+.launcher-preview.theme-casinha .preview-tile:nth-child(4n+4) { background:#fff0b8; }
+.launcher-preview.theme-castelo .preview-tile { color:#6b2a7a; border:3px solid #f4c542; border-radius:16px; background:linear-gradient(180deg,#fffdf8,#ffeef7); }

@@ -8,7 +8,9 @@ import unicodedata
 
 
 SPEECH_ENGINES = ("spd-say", "espeak-ng", "espeak")
-SUPPORTED_LANGUAGES = {"de", "en"}
+SUPPORTED_LANGUAGES = {"de", "en", "pt"}
+SPD_VOICES = {"pt": "pt-BR"}
+ESPEAK_VOICES = {"pt": "pt-br"}
 MAX_SPEECH_TEXT_LENGTH = 200
 MIN_SPEECH_INTERVAL_SECONDS = 0.2
 MAX_SPEECH_DURATION_SECONDS = 20
@@ -45,9 +47,9 @@ def speech_command(engine, executable, text, language):
     normalized = normalize_speech_text(text)
     voice = language if language in SUPPORTED_LANGUAGES else "en"
     if engine == "spd-say":
-        return [executable, "-w", "-l", voice, normalized]
+        return [executable, "-w", "-l", SPD_VOICES.get(voice, voice), normalized]
     if engine in ("espeak-ng", "espeak"):
-        return [executable, "-v", voice, normalized]
+        return [executable, "-v", ESPEAK_VOICES.get(voice, voice), normalized]
     raise ValueError("Unsupported speech engine")
 
 

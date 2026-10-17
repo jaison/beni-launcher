@@ -1150,7 +1150,8 @@ class ServerApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(
             availability,
-            {"profileAllowed": False, "blockedTileIds": ["paint"]},
+            # Beni Launcher: a resposta inclui os bloqueios por limite de tempo
+            {"profileAllowed": False, "blockedTileIds": ["paint"], "limitBlocked": {}},
         )
 
         with mock.patch.object(server_module, "launch_owned_tile") as launch:
@@ -2065,7 +2066,8 @@ class FrontendSafetyTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("fetch('/api/diagnostics')", source)
-        self.assertIn("{{LABEL_EXPORT_DIAGNOSTICS}}", source)
+        # Beni Launcher: o index.html já vem traduzido para pt-BR (não é mais um modelo)
+        self.assertIn("exportDiagnostics", source)
         self.assertIn('de:export_diagnostics) echo "Diagnose herunterladen"', installer)
         self.assertIn('en:export_diagnostics) echo "Download diagnostics"', installer)
 

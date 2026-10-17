@@ -1,0 +1,6 @@
+[Unit]
+Description=Cozy Kids: sincroniza coleções do itch.io
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/cozy-itch-sync

@@ -2,7 +2,7 @@
 let timerWarningShown=false;
 function formatTime(sec){
   const m=Math.max(0,Math.floor(sec/60));
-  return m+' {{TIMER_MINUTES}}';
+  return m+' minutes';
 }
 async function pollTimer(){
   try{
@@ -207,6 +207,7 @@ async function saveConfig(){
   cfg.accessibilityHighContrast=document.getElementById('cfgAccessibilityHighContrast').checked;
   cfg.accessibilityReducedMotion=document.getElementById('cfgAccessibilityReducedMotion').checked;
   cfg.accessibilityKeyboardFocus=document.getElementById('cfgAccessibilityKeyboardFocus').checked;
+  cfg.choiceScreenEnabled=document.getElementById('cfgChoiceScreenEnabled').checked;
   cfg.layoutMode=document.getElementById('cfgLayoutMode').value;
   cfg.parentLabel=document.getElementById('cfgParentLabel').value;
   cfg.exitLabel=document.getElementById('cfgExitLabel').value;
@@ -289,7 +290,7 @@ async function importConfig(input){
 }
 function backupLabel(backup){
   const date=new Date(backup.createdAt);
-  const locale=interfaceLanguage()==='de'?'de-DE':'en-US';
+  const locale=interfaceLanguage()==='de'?'de-DE':interfaceLanguage()==='pt'?'pt-BR':'en-US';
   const created=Number.isNaN(date.getTime())?backup.createdAt:date.toLocaleString(locale);
   const source=backup.source==='pre-restore'?uiText.backupPreRestore:uiText.backupInstaller;
   return source+' · '+created;
@@ -380,8 +381,9 @@ function updateTileFocus(moveFocus=true){
   });
 }
 function focusTileByDir(dir){
-  const tiles=tilesForPage(cfg.currentPage);
-  const cols=cfg.layoutMode==='klein'?3:2;
+  const naEscolha=typeof escolhaNaTela==='function'&&escolhaNaTela();
+  const tiles=naEscolha?ESCOLHA_OPCOES:tilesForPage(cfg.currentPage);
+  const cols=naEscolha?ESCOLHA_OPCOES.length:(cfg.layoutMode==='klein'?3:2);
   if(dir==='right'){
     if((focusedTileIndex+1)%cols!==0&&focusedTileIndex+1<tiles.length) focusedTileIndex++;
   }else if(dir==='left'){
@@ -394,7 +396,9 @@ function focusTileByDir(dir){
   updateTileFocus();
 }
 document.addEventListener('keydown',function(e){
+  const usageMessageOpen=!!document.getElementById('usageMessage')&&!document.getElementById('usageMessage').classList.contains('hidden');
   if(e.key==='Escape'){
+    if(usageMessageOpen){ e.preventDefault(); hideUsageMessage(); if(document.getElementById('admin').classList.contains('hidden')) updateTileFocus(); return; }
     if(!document.getElementById('availabilityBlock').classList.contains('hidden')){ e.preventDefault(); hideAvailabilityBlock(); return; }
     if(!document.getElementById('themeOverlay').classList.contains('hidden')){ e.preventDefault(); closeThemePicker(); return; }
     if(!document.getElementById('installOverlay').classList.contains('hidden')){ e.preventDefault(); closeInstallOverlay(); return; }
@@ -410,8 +414,10 @@ document.addEventListener('keydown',function(e){
   if(!document.getElementById('timerBlock').classList.contains('hidden')) return;
   if(!document.getElementById('timerWarning').classList.contains('hidden')) return;
   if(!document.getElementById('startOverlay').classList.contains('hidden')) return;
+  if(usageMessageOpen) return;
   const tiles=tilesForPage(cfg.currentPage);
-  if(tiles.length===0) return;
+  const naListaEscolha=typeof escolhaNaLista==='function'&&escolhaNaLista();
+  if(tiles.length===0&&!naListaEscolha) return;
   const tileFocused=document.activeElement&&document.activeElement.matches('#grid .tile:not(.placeholder)');
   const tileKey=tileFocused&&(e.key==='ArrowRight'||e.key==='ArrowLeft'||e.key==='ArrowDown'||e.key==='ArrowUp');
   if(tileKey||e.key==='Escape'){
@@ -421,7 +427,7 @@ document.addEventListener('keydown',function(e){
   else if(tileFocused&&e.key==='ArrowLeft') focusTileByDir('left');
   else if(tileFocused&&e.key==='ArrowDown') focusTileByDir('down');
   else if(tileFocused&&e.key==='ArrowUp') focusTileByDir('up');
-  else if(e.key==='Escape') exitKids();
+  else if(e.key==='Escape'){ if(naListaEscolha) escolhaVoltar(); else exitKids(); }
 });
 
 bootstrapLauncher();

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Cozy Kids Launcher: abre um app que normalmente abre em janela e coloca as janelas dele
+# em tela cheia, para as barras do Mint não aparecerem para a criança.
+# Uso: cozy-fullscreen <classe-da-janela> <comando> [args...]
+classe="$1"; shift
+"$@" &
+app=$!
+trap 'kill -TERM $app 2>/dev/null; wait $app; exit' TERM INT HUP
+# Enquanto o app estiver aberto, coloca em tela cheia toda janela nova dessa classe
+(
+  feitas=" "
+  while kill -0 $app 2>/dev/null; do
+    for w in $(wmctrl -lx | awk -v c="$classe" 'tolower($3) ~ tolower(c) {print $1}'); do
+      case "$feitas" in *" $w "*) continue;; esac
+      wmctrl -i -r "$w" -b add,fullscreen && feitas="$feitas$w "
+      wmctrl -i -a "$w"
+    done
+    sleep 1
+  done
+) &
+vigia=$!
+wait $app
+kill $vigia 2>/dev/null

@@ -3,8 +3,10 @@ function visibleTiles(){ return cfg.tiles.filter(t => t.visible); }
 function isMediaLibraryTile(tile){
   return !!tile&&Array.isArray(tile.cmd)&&tile.cmd.length===1&&tile.cmd[0]==='special:filme-musik';
 }
-function pageCount(){ return Math.max(1, Math.ceil(visibleTiles().length / pageSize())); }
-function tilesForPage(page){ const all=visibleTiles(); const size=pageSize(); return all.slice(page*size, page*size + size); }
+// Tiles da tela da criança: visíveis e, depois da escolha Aprender/Jogar, só os da categoria (escolha.js).
+function kidsTiles(){ return visibleTiles().filter(t=>typeof escolhaTileNaLista!=='function'||escolhaTileNaLista(t)); }
+function pageCount(){ return Math.max(1, Math.ceil(kidsTiles().length / pageSize())); }
+function tilesForPage(page){ const all=kidsTiles(); const size=pageSize(); return all.slice(page*size, page*size + size); }
 async function loadConfig(){
   const response=await fetch('/api/config',{cache:'no-store'});
   if(!response.ok) throw new Error('Config could not be loaded');
@@ -13,6 +15,7 @@ async function loadConfig(){
   cfg=data;
   await loadInterfaceLanguage(cfg.language);
   if(typeof cfg.currentPage!=='number') cfg.currentPage=0;
+  if(typeof escolhaAplicarPaginaRetorno==='function') escolhaAplicarPaginaRetorno();
   renderAll();
 }
 async function loadApps(refreshAdmin=false){
@@ -54,6 +57,8 @@ async function loadFeatures(){
     const data=await response.json();
     if(data&&typeof data==='object'){
       features=data;
+      const shutdownBtn=document.getElementById('shutdownBtn');
+      if(shutdownBtn) shutdownBtn.style.display=features.shutdownAvailable?'':'none';
       announceFocusedTile();
     }
   }catch(e){}
@@ -83,7 +88,7 @@ function showLauncherStartupState(state){
   document.getElementById('navLeft').classList.add('hidden');
   document.getElementById('navRight').classList.add('hidden');
   title.textContent=state==='error'?uiText.startupErrorTitle:'';
-  grid.className='grid {{DEFAULT_LAYOUT}}';
+  grid.className='grid gross';
   grid.replaceChildren();
   const status=document.createElement('section');
   status.id='startupState';
@@ -163,12 +168,12 @@ function renderAll(){
   applyAccessibilityRuntime(document.body,cfg);
   scheduleThemeRuntimeRefresh(document.body,()=>cfg);
   applyDynamicTheme();
-  document.getElementById('title').textContent=cfg.title||'{{DEFAULT_TITLE}}';
+  document.getElementById('title').textContent=cfg.title||'Hello Kiddo 🌈';
   const isAdmin=!document.getElementById('admin').classList.contains('hidden');
   const cornerbar=document.querySelector('.cornerbar');
   cornerbar.classList.toggle('hidden',isAdmin);
   const parentBtn=document.getElementById('parentBtn');
-  setIconLabel(parentBtn,isAdmin?'back':'system',isAdmin?(uiText.back||'{{LABEL_BACK}}'):(cfg.parentLabel||'{{DEFAULT_PARENT_LABEL}}'));
+  setIconLabel(parentBtn,isAdmin?'back':'system',isAdmin?(uiText.back||'Back'):(cfg.parentLabel||'Parent'));
   parentBtn.style.position='relative';
   let badge=parentBtn.querySelector('.update-badge');
   if(updateAvailable && !isAdmin){
@@ -181,12 +186,12 @@ function renderAll(){
   }else if(badge){
     badge.remove();
   }
-  setIconLabel(document.getElementById('exitBtn'),'exit',cfg.exitLabel||'{{DEFAULT_EXIT_LABEL}}');
+  setIconLabel(document.getElementById('exitBtn'),'exit',cfg.exitLabel||'Exit kids mode');
   const shutdownBtn=document.getElementById('shutdownBtn');
-  setIconLabel(shutdownBtn,'power',cfg.shutdownLabel||'{{SHUTDOWN_LABEL}}');
+  setIconLabel(shutdownBtn,'power',cfg.shutdownLabel||'Shut down');
   shutdownBtn.style.display=features.shutdownAvailable?'':'none';
   renderProfileButton();
-  document.getElementById('grid').className='grid '+(cfg.layoutMode||'{{DEFAULT_LAYOUT}}');
+  document.getElementById('grid').className='grid '+(cfg.layoutMode||'gross');
   const pc=pageCount();
   if(cfg.currentPage>=pc) cfg.currentPage=pc-1;
   if(cfg.currentPage<0) cfg.currentPage=0;
@@ -201,6 +206,7 @@ function renderAll(){
 function renderKids(){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
+  if(typeof renderEscolha==='function'&&renderEscolha(grid)) return;
   const tiles=tilesForPage(cfg.currentPage);
   const size=pageSize();
   let lastLaunched='';
@@ -234,7 +240,9 @@ function renderKids(){
         if(blocked.has(tile.id)){
           playFeedbackSound('blocked');
           showAvailabilityBlock(
-            availabilityStatus.profileAllowed?'app_schedule':'profile_schedule'
+            (typeof usageLimitReason==='function'&&usageLimitReason(tile.id))||
+            (availabilityStatus.profileAllowed?'app_schedule':'profile_schedule'),
+            tile.id
           );
         }else{
           launchTile(tile.id);
@@ -261,8 +269,9 @@ function renderKids(){
   if(focusedTileIndex>=tiles.length) focusedTileIndex=0;
   updateTileFocus();
 }
-function renderNav(){ const homeHidden=document.getElementById('kids').classList.contains('hidden'); document.getElementById('navLeft').classList.toggle('hidden', homeHidden||cfg.currentPage<=0); document.getElementById('navRight').classList.toggle('hidden', homeHidden||cfg.currentPage>=pageCount()-1); }
+function renderNav(){ const homeHidden=document.getElementById('kids').classList.contains('hidden')||(typeof escolhaNaTela==='function'&&escolhaNaTela()); document.getElementById('navLeft').classList.toggle('hidden', homeHidden||cfg.currentPage<=0); document.getElementById('navRight').classList.toggle('hidden', homeHidden||cfg.currentPage>=pageCount()-1); }
 function changePage(dir){
+  if(typeof escolhaNaTela==='function'&&escolhaNaTela()) return;
   const nextPage=Math.max(0,Math.min(pageCount()-1,cfg.currentPage+dir));
   if(nextPage===cfg.currentPage) return;
   cfg.currentPage=nextPage;
@@ -308,6 +317,7 @@ async function launchTile(id){
   if(isMediaLibraryTile(tile)){
     try{ localStorage.setItem(profileStorageKey(),id); }catch(e){}
     rememberLauncherPageReturn(cfg.activeProfileId||'default',id);
+    if(typeof escolhaLembrarRetorno==='function') escolhaLembrarRetorno();
     window.location='/media.html?tile='+encodeURIComponent(id);
     return;
   }
@@ -319,7 +329,7 @@ async function launchTile(id){
       cancelLauncherFocusReturn();
       hideStartFeedback();
       const data=await response.json();
-      showAvailabilityBlock(data.reason||'profile_schedule');
+      showAvailabilityBlock(data.reason||'profile_schedule',id);
       await pollAvailability();
       return;
     }
@@ -328,6 +338,7 @@ async function launchTile(id){
     if(response.redirected){
       cancelLauncherFocusReturn();
       rememberLauncherPageReturn(cfg.activeProfileId||'default',id);
+    if(typeof escolhaLembrarRetorno==='function') escolhaLembrarRetorno();
       window.location=response.url;
       return;
     }
@@ -343,8 +354,8 @@ function showPin(){ pinReturnFocus=document.activeElement; document.getElementBy
 function hidePin(){ document.getElementById('pin').classList.add('hidden'); }
 function cancelPin(){ hidePin(); document.getElementById('pinInput').value=''; document.getElementById('pinErr').textContent=''; pinCallback=null; if(pinReturnFocus&&pinReturnFocus.isConnected) pinReturnFocus.focus(); pinReturnFocus=null; }
 async function submitPin(){ const val=document.getElementById('pinInput').value; const r=await fetch('/api/verify-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:val})}); const data=await r.json(); if(data.valid){ hidePin(); pinReturnFocus=null; if(pinCallback){ pinCallback(); pinCallback=null; } } else { document.getElementById('pinErr').textContent=uiText.pinWrong; document.getElementById('pinInput').value=''; document.getElementById('pinInput').focus(); } }
-function enterAdmin(){ cancelTileSpeech(); adminPage=cfg.currentPage; adminSection='overview'; adminTileQuery=''; adminTileVisibility='all'; adminSelectedTileIds.clear(); document.getElementById('kids').classList.add('hidden'); const admin=document.getElementById('admin'); admin.classList.remove('hidden'); document.querySelector('.cornerbar').classList.add('hidden'); document.getElementById('parentBtn').textContent=uiText.back||'{{LABEL_BACK}}'; renderAdmin(); renderNav(); playScreenTransition(admin); document.getElementById('adminNavOverview').focus(); loadBackups(); loadActivityDashboard(); }
-function closeAdmin(){ document.getElementById('admin').classList.add('hidden'); const kids=document.getElementById('kids'); kids.classList.remove('hidden'); document.querySelector('.cornerbar').classList.remove('hidden'); document.getElementById('parentBtn').textContent=cfg.parentLabel||'{{DEFAULT_PARENT_LABEL}}'; focusedTileIndex=0; renderAll(); playScreenTransition(kids,true); }
+function enterAdmin(){ cancelTileSpeech(); adminPage=cfg.currentPage; adminSection='overview'; adminTileQuery=''; adminTileVisibility='all'; adminSelectedTileIds.clear(); document.getElementById('kids').classList.add('hidden'); const admin=document.getElementById('admin'); admin.classList.remove('hidden'); document.querySelector('.cornerbar').classList.add('hidden'); document.getElementById('parentBtn').textContent=uiText.back||'Back'; renderAdmin(); renderNav(); playScreenTransition(admin); document.getElementById('adminNavOverview').focus(); loadBackups(); loadActivityDashboard(); }
+function closeAdmin(){ document.getElementById('admin').classList.add('hidden'); const kids=document.getElementById('kids'); kids.classList.remove('hidden'); document.querySelector('.cornerbar').classList.remove('hidden'); document.getElementById('parentBtn').textContent=cfg.parentLabel||'Parent'; focusedTileIndex=0; renderAll(); playScreenTransition(kids,true); }
 function shutdownNow(){ if(cfg.pinConfigured){ requestPin(() => { fetch('/shutdown',{method:'POST'}).catch(()=>{}); }); return; } fetch('/shutdown',{method:'POST'}).catch(()=>{}); }
 function exitKids(){ if(cfg.pinConfigured){ requestPin(() => { fetch('/exit-kids',{method:'POST'}).catch(()=>{}); }); return; } fetch('/exit-kids',{method:'POST'}).catch(()=>{}); }
 
@@ -363,13 +374,20 @@ const ALL_THEMES=[
   {id:'bauernhof',type:'world',img:'/themes/farm.jpg'},
   {id:'katzen',type:'world',img:'/themes/cats.jpg'},
   {id:'hunde',type:'world',img:'/themes/dogs.jpg'},
+  {id:'heroi',type:'world',img:'/themes/heroi.svg'},
+  {id:'blocos',type:'world',img:'/themes/blocos.svg'},
+  {id:'ninja',type:'world',img:'/themes/ninja.svg'},
+  {id:'gelo',type:'world',img:'/themes/gelo.svg'},
+  {id:'casinha',type:'world',img:'/themes/casinha.svg'},
+  {id:'castelo',type:'world',img:'/themes/castelo.svg'},
   {id:'custom',type:'color',gradient:'linear-gradient(180deg,#ffd6e8,#ffeef6)'}
 ];
 const THEME_LABELS={
-  de:{rosa:'Rosa',lila:'Lila',blau:'Blau',gruen:'Grün',regenbogen:'Regenbogen',wald:'Wald',weltraum:'Weltraum',ocean:'Ozean',dinosaurier:'Dinosaurier',baustelle:'Baustelle',prinzessin:'Prinzessin',bauernhof:'Bauernhof',katzen:'Katzen',hunde:'Hunde',custom:'Eigene Farben'},
-  en:{rosa:'Pink',lila:'Purple',blau:'Blue',gruen:'Green',regenbogen:'Rainbow',wald:'Forest',weltraum:'Space',ocean:'Ocean',dinosaurier:'Dinosaurs',baustelle:'Construction',prinzessin:'Princess',bauernhof:'Farm',katzen:'Cats',hunde:'Dogs',custom:'Custom'}
+  de:{rosa:'Rosa',lila:'Lila',blau:'Blau',gruen:'Grün',regenbogen:'Regenbogen',wald:'Wald',weltraum:'Weltraum',ocean:'Ozean',dinosaurier:'Dinosaurier',baustelle:'Baustelle',prinzessin:'Prinzessin',bauernhof:'Bauernhof',katzen:'Katzen',hunde:'Hunde',heroi:'Spinnenheld',blocos:'Bausteine',ninja:'Ninja-Dojo',gelo:'Eisreich',casinha:'Puppenhaus',castelo:'Zauberschloss',custom:'Eigene Farben'},
+  en:{rosa:'Pink',lila:'Purple',blau:'Blue',gruen:'Green',regenbogen:'Rainbow',wald:'Forest',weltraum:'Space',ocean:'Ocean',dinosaurier:'Dinosaurs',baustelle:'Construction',prinzessin:'Princess',bauernhof:'Farm',katzen:'Cats',hunde:'Dogs',heroi:'Herói Aranha',blocos:'Blocos de Montar',ninja:'Dojo Ninja',gelo:'Reino do Gelo',casinha:'Casinha Mágica',castelo:'Castelo Encantado',custom:'Custom'},
+  pt:{rosa:'Rosa',lila:'Lilás',blau:'Azul',gruen:'Verde',regenbogen:'Arco-íris',wald:'Floresta',weltraum:'Espaço',ocean:'Oceano',dinosaurier:'Dinossauros',baustelle:'Construção',prinzessin:'Princesa',bauernhof:'Fazenda',katzen:'Gatinhos',hunde:'Cachorrinhos',heroi:'Herói Aranha',blocos:'Blocos de Montar',ninja:'Dojo Ninja',gelo:'Reino do Gelo',casinha:'Casinha Mágica',castelo:'Castelo Encantado',custom:'Cores próprias'}
 };
-function interfaceLanguage(){ return ((cfg&&cfg.language)||'{{ACTIVE_LANG}}')==='de'?'de':'en'; }
+function interfaceLanguage(){ const language=(cfg&&cfg.language)||'en'; return language==='de'||language==='pt'?language:'en'; }
 function themeLabel(id){ return THEME_LABELS[interfaceLanguage()][id]||id; }
 function openThemePicker(){ document.getElementById('themeOverlay').classList.remove('hidden'); renderThemeChooser(); requestAnimationFrame(()=>{ const first=document.querySelector('#themeChooser .theme-thumb'); if(first) first.focus(); }); }
 function closeThemePicker(){

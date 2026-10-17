@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: Klavaro (curso de digitação).
+exec cozy-fullscreen klavaro flatpak run net.sourceforge.Klavaro

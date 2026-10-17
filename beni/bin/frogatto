@@ -1,0 +1,4 @@
+#!/bin/sh
+# Cozy Kids Launcher: Frogatto em tela cheia na resolução atual da tela, sem prender o mouse.
+RES=$(xrandr 2>/dev/null | awk '/\*/{print $1; exit}'); RES=${RES:-1366x768}; W=${RES%x*}; H=${RES#*x}
+LD_PRELOAD="$HOME/.local/lib/cozy-fixes/nograb.so" exec /usr/games/frogatto --fullscreen --width "$W" --height "$H"

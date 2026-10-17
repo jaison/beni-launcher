@@ -14,9 +14,9 @@ import urllib.request
 from process_state import terminate_owned_process
 
 HOME = os.path.expanduser("~")
-APP_ID = "{{APP_ID}}"
-APP_NAME = "{{APP_NAME}}"
-PORT = int("{{DEFAULT_PORT}}")
+APP_ID = "cozy-kids-launcher"
+APP_NAME = "Cozy Kids Launcher"
+PORT = int("38431")
 BASE_URL = f"http://127.0.0.1:{PORT}"
 CACHE_DIR = os.path.join(HOME, ".cache", APP_ID)
 BROWSER_PIDFILE = os.path.join(CACHE_DIR, "browser.pid")
@@ -111,7 +111,7 @@ class WatchdogApp:
 
         lbl = tk.Label(
             frame,
-            text=f"⏰ {remaining} {{TIMER_MINUTES}}!",
+            text=f"⏰ {remaining} minutes!",
             font=("system-ui", 22, "bold"),
             bg=THEME["card"],
             fg=THEME["text"],
@@ -171,7 +171,7 @@ class WatchdogApp:
 
         title = tk.Label(
             card,
-            text="{{TIMER_EXPIRED_TITLE}}",
+            text="Acabou o tempo!",
             font=("system-ui", int(base_size * 0.045), "bold"),
             bg=THEME["card"],
             fg=THEME["text"],
@@ -180,7 +180,7 @@ class WatchdogApp:
 
         body = tk.Label(
             card,
-            text="{{TIMER_EXPIRED_BODY}}",
+            text="Peça para a mamãe ou o papai para continuar brincando.",
             font=("system-ui", int(base_size * 0.025)),
             bg=THEME["card"],
             fg=THEME["text"],
@@ -194,7 +194,7 @@ class WatchdogApp:
 
         pin_lbl = tk.Label(
             pin_frame,
-            text="{{TIMER_ENTER_PIN}}",
+            text="Digite o PIN:",
             font=("system-ui", int(base_size * 0.022)),
             bg=THEME["card"],
             fg=THEME["text"],
@@ -233,10 +233,10 @@ class WatchdogApp:
             pin = pin_entry.get()
             res = api("/api/timer/extend", {"pin": pin, "minutes": minutes})
             if res.get("valid"):
-                err_lbl.config(text="{{TIMER_EXTENDED}}", fg="#27ae60")
+                err_lbl.config(text="Tempo extra liberado!", fg="#27ae60")
                 b.after(800, lambda: self._destroy_block())
             else:
-                err_lbl.config(text="{{TIMER_WRONG_PIN}}", fg="#c00")
+                err_lbl.config(text="PIN incorreto", fg="#c00")
                 pin_entry.delete(0, tk.END)
                 pin_entry.focus_set()
 
@@ -276,7 +276,7 @@ class WatchdogApp:
 
         custom_btn = tk.Button(
             custom_frame,
-            text="{{TIMER_EXTEND}}",
+            text="Dar mais tempo",
             font=("system-ui", int(base_size * 0.022), "bold"),
             bg=THEME["btn"],
             fg=THEME["btn_text"],
@@ -293,7 +293,7 @@ class WatchdogApp:
         # Exit button
         exit_btn = tk.Button(
             card,
-            text="{{TIMER_EXIT}}",
+            text="Sair",
             font=("system-ui", int(base_size * 0.022), "bold"),
             bg=THEME["smallbtn_bg"],
             fg=THEME["text"],

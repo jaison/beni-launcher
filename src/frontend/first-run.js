@@ -2,12 +2,13 @@ let firstRunStep=0;
 let firstRunBusy=false;
 const FIRST_RUN_TEXT={
   de:{progress:'Schritt {current} von {total}',languageTitle:'Willkommen bei Cozy Kids',languageBody:'In welcher Sprache soll der Launcher angezeigt werden?',childTitle:'Für wen ist dieser Launcher?',childBody:'Name, Avatar und Überschrift können später jederzeit geändert werden.',childName:'Name des Kindes',childAvatar:'Avatar-Emoji',homeTitle:'Überschrift auf dem Startbildschirm',appsTitle:'Welche Kacheln sollen sichtbar sein?',appsBody:'Programme können später in den Eltern-Einstellungen ergänzt oder geändert werden.',timeTitle:'Erste Bildschirmzeit-Regel',timeBody:'Lege eine einfache Sitzungsdauer fest oder starte zunächst ohne Timer.',appearanceTitle:'Wie soll es aussehen?',appearanceBody:'Wähle ein Thema und die Größe der Kacheln.',skip:'Vorerst überspringen',back:'Zurück',next:'Weiter',finish:'Fertig',saving:'Einrichtung wird gespeichert...',error:'Die Einrichtung konnte nicht gespeichert werden. Bitte erneut versuchen.',nameRequired:'Bitte einen Namen eingeben.',noApps:'Noch keine Kacheln verfügbar.',large:'Große Kacheln',small:'Kleine Kacheln'},
-  en:{progress:'Step {current} of {total}',languageTitle:'Welcome to Cozy Kids',languageBody:'Which language should the launcher use?',childTitle:'Who is this launcher for?',childBody:'The name, avatar, and home title can be changed at any time.',childName:"Child's name",childAvatar:'Avatar emoji',homeTitle:'Home screen title',appsTitle:'Which tiles should be visible?',appsBody:'Apps can be added or changed later in Parent settings.',timeTitle:'First screen-time rule',timeBody:'Choose a simple session length or start without a timer.',appearanceTitle:'How should it look?',appearanceBody:'Choose a theme and tile size.',skip:'Skip for now',back:'Back',next:'Next',finish:'Finish',saving:'Saving setup...',error:'Setup could not be saved. Please try again.',nameRequired:'Please enter a name.',noApps:'No tiles are available yet.',large:'Large tiles',small:'Small tiles'}
+  en:{progress:'Step {current} of {total}',languageTitle:'Welcome to Cozy Kids',languageBody:'Which language should the launcher use?',childTitle:'Who is this launcher for?',childBody:'The name, avatar, and home title can be changed at any time.',childName:"Child's name",childAvatar:'Avatar emoji',homeTitle:'Home screen title',appsTitle:'Which tiles should be visible?',appsBody:'Apps can be added or changed later in Parent settings.',timeTitle:'First screen-time rule',timeBody:'Choose a simple session length or start without a timer.',appearanceTitle:'How should it look?',appearanceBody:'Choose a theme and tile size.',skip:'Skip for now',back:'Back',next:'Next',finish:'Finish',saving:'Saving setup...',error:'Setup could not be saved. Please try again.',nameRequired:'Please enter a name.',noApps:'No tiles are available yet.',large:'Large tiles',small:'Small tiles'},
+  pt:{progress:'Passo {current} de {total}',languageTitle:'Bem-vindo ao Cozy Kids',languageBody:'Em qual idioma o launcher deve aparecer?',childTitle:'Para quem é este launcher?',childBody:'O nome, o avatar e o título da tela inicial podem ser mudados quando quiser.',childName:'Nome da criança',childAvatar:'Emoji do avatar',homeTitle:'Título da tela inicial',appsTitle:'Quais blocos devem aparecer?',appsBody:'Os apps podem ser adicionados ou mudados depois na área dos pais.',timeTitle:'Primeira regra de tempo de tela',timeBody:'Escolha um tempo de sessão simples ou comece sem timer.',appearanceTitle:'Como deve ficar?',appearanceBody:'Escolha um tema e o tamanho dos blocos.',skip:'Pular por enquanto',back:'Voltar',next:'Avançar',finish:'Concluir',saving:'Salvando a configuração...',error:'Não foi possível salvar a configuração. Tente de novo.',nameRequired:'Digite um nome.',noApps:'Ainda não há blocos disponíveis.',large:'Blocos grandes',small:'Blocos pequenos'}
 };
 const FIRST_RUN_STEPS=['language','child','apps','time','appearance'];
 
 function firstRunText(){
-  return FIRST_RUN_TEXT[cfg&&cfg.language==='de'?'de':'en'];
+  return FIRST_RUN_TEXT[cfg&&(cfg.language==='de'||cfg.language==='pt')?cfg.language:'en'];
 }
 
 function maybeOpenFirstRun(){
@@ -80,7 +81,7 @@ function renderFirstRun(){
 function renderFirstRunLanguage(content){
   const choices=document.createElement('div');
   choices.className='first-run-language-grid';
-  for(const [language,label,emoji] of [['de','Deutsch','🇩🇪'],['en','English','🇬🇧']]){
+  for(const [language,label,emoji] of [['pt','Português (Brasil)','🇧🇷'],['de','Deutsch','🇩🇪'],['en','English','🇬🇧']]){
     const button=document.createElement('button');
     button.type='button';
     button.className='first-run-choice';

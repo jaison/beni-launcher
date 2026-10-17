@@ -62,7 +62,7 @@ function applyMediaTheme(config){
 }
 
 async function loadMediaText(language){
-  const normalized=language==='de'?'de':'en';
+  const normalized=language==='de'||language==='pt'?language:'en';
   document.documentElement.lang=normalized;
   try{
     const response=await fetch('/frontend/locales/'+normalized+'.json',{cache:'no-store'});

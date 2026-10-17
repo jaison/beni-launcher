@@ -128,7 +128,7 @@ function renderScheduleControls(){
   for(const tile of cfg.tiles){
     const option=document.createElement('option');
     option.value=tile.id;
-    option.textContent=(tile.emoji?tile.emoji+' ':'')+(tile.label||tile.id);
+    option.textContent=(tile.emoji&&!String(tile.emoji).startsWith('img:')?tile.emoji+' ':'')+(tile.label||tile.id);
     select.appendChild(option);
   }
   if(!cfg.tiles.some(tile=>tile.id===selectedAppScheduleId)) selectedAppScheduleId=cfg.tiles[0]?cfg.tiles[0].id:'';
@@ -155,7 +155,11 @@ function removeTileSchedule(tileId){
 function blockedTileIds(){
   return new Set(Array.isArray(availabilityStatus.blockedTileIds)?availabilityStatus.blockedTileIds:[]);
 }
-function showAvailabilityBlock(reason='profile_schedule'){
+function showAvailabilityBlock(reason='profile_schedule',tileId=''){
+  if((reason==='category_limit'||reason==='daily_limit')&&typeof showUsageLimitBlock==='function'){
+    showUsageLimitBlock(reason,tileId);
+    return;
+  }
   const overlay=document.getElementById('availabilityBlock');
   overlay.dataset.reason=reason;
   document.getElementById('availabilityBlockTitle').textContent=uiText.scheduleBlockedTitle;

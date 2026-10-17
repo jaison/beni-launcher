@@ -33,6 +33,8 @@ PROFILE_FIELDS = (
     "appLimits",
     "weeklySchedule",
     "appAvailability",
+    "categoryLimits",
+    "choiceScreenEnabled",
 )
 
 

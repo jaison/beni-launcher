@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: Scratch (TurboWarp) para programar.
+exec cozy-fullscreen turbowarp-desktop flatpak run org.turbowarp.TurboWarp

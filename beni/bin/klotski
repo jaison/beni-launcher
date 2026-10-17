@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: Klotski (blocos deslizantes) em tela cheia.
+exec cozy-fullscreen gnome-klotski flatpak run org.gnome.Klotski

@@ -1,4 +1,4 @@
-const SUPPORTED_INTERFACE_LANGUAGES=Object.freeze(['de','en']);
+const SUPPORTED_INTERFACE_LANGUAGES=Object.freeze(['de','en','pt']);
 
 function normalizedInterfaceLanguage(language){
   return SUPPORTED_INTERFACE_LANGUAGES.includes(language)?language:'en';

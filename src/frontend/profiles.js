@@ -1,5 +1,5 @@
 function profileText(){
-  return PROFILE_TEXT[cfg&&cfg.language==='de'?'de':'en'];
+  return PROFILE_TEXT[cfg&&(cfg.language==='de'||cfg.language==='pt')?cfg.language:'en'];
 }
 
 function activeProfileSummary(){

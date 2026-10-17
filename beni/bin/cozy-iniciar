@@ -1,0 +1,6 @@
+#!/bin/sh
+# Cozy Kids Launcher no login: primeiro atualiza os jogos das coleções do itch.io
+# (no máximo ~60 s, esperando a internet até 20 s), depois abre o launcher.
+nm-online -q -t 20 2>/dev/null
+timeout 60 "$HOME/.local/bin/cozy-itch-sync" >/dev/null 2>&1
+exec "$HOME/.local/bin/cozy-kids-launcher" "$@"

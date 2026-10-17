@@ -1,0 +1,11 @@
+#!/bin/bash
+# Cozy Kids Launcher: Hex-a-hop em tela cheia (Alt+Enter) sem prender o mouse.
+LD_PRELOAD="$HOME/.local/lib/cozy-fixes/nograb.so" /usr/games/hex-a-hop "$@" &
+app=$!
+trap 'kill -TERM $app 2>/dev/null; wait $app; exit' TERM INT HUP
+for _ in $(seq 1 30); do
+  w=$(xdotool search --onlyvisible --class hex-a-hop 2>/dev/null | head -1)
+  if [ -n "$w" ]; then sleep 1; xdotool windowactivate --sync "$w" key alt+Return; break; fi
+  sleep 0.5
+done
+wait $app

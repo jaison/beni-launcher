@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Cozy Kids Launcher: sincroniza as coleções do itch.io com os perfis das crianças.
+
+Cada perfil tem uma coleção pública no itch.io (configurada em
+~/.config/cozy-kids-launcher/itch-colecoes.json). Os jogos de navegador (HTML5)
+de cada coleção viram ícones "itch-<jogo>" no perfil, com a capa do jogo.
+Jogo removido da coleção some do perfil. Sem internet, nada é alterado.
+Jogos só para download (sem versão de navegador) são ignorados.
+"""
+import html
+import json
+import os
+import re
+import sys
+import tempfile
+import time
+import urllib.request
+
+HOME = os.path.expanduser("~")
+CFG = os.path.join(HOME, ".config/cozy-kids-launcher/config.json")
+COLECOES = os.path.join(HOME, ".config/cozy-kids-launcher/itch-colecoes.json")
+CACHE = os.path.join(HOME, ".cache/cozy-kids-launcher/itch-cache.json")
+COVERS = os.path.join(HOME, ".local/share/cozy-kids-launcher/themes/covers")
+LOG = os.path.join(HOME, ".local/state/cozy-kids-launcher/itch-sync.log")
+UA = "Mozilla/5.0 (X11; Linux x86_64) CozyKidsLauncher-itch-sync"
+PAUSA = 2.5  # segundos entre pedidos, para não levar "429 Too Many Requests"
+
+
+def log(msg):
+    os.makedirs(os.path.dirname(LOG), exist_ok=True)
+    linha = time.strftime("%Y-%m-%d %H:%M:%S ") + msg
+    print(linha)
+    with open(LOG, "a", encoding="utf-8") as f:
+        f.write(linha + "\n")
+
+
+def baixar(url, binario=False, tentativas=4):
+    espera = 10
+    for i in range(tentativas):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=25) as r:
+                dados = r.read()
+            time.sleep(PAUSA)
+            return dados if binario else dados.decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and i < tentativas - 1:
+                time.sleep(espera)
+                espera *= 2
+                continue
+            raise
+    raise RuntimeError("falhou: " + url)
+
+
+def jogos_da_colecao(url):
+    """Lista (url_do_jogo, titulo, capa) de todas as páginas da coleção."""
+    jogos, vistos, pagina = [], set(), 1
+    while pagina <= 20:
+        pg = baixar(url + ("" if pagina == 1 else f"?page={pagina}"))
+        novos = 0
+        for cel in re.split(r'<div[^>]+class="game_cell[ "]', pg)[1:]:
+            m = re.search(r'class="title game_link"[^>]*href="([^"]+)"[^>]*>([^<]+)<', cel) or \
+                re.search(r'href="([^"]+)"[^>]*class="title game_link"[^>]*>([^<]+)<', cel)
+            if not m:
+                continue
+            link, titulo = m.group(1), html.unescape(m.group(2)).strip()
+            if link in vistos:
+                continue
+            capa = re.search(r'data-lazy_src="([^"]+)"', cel) or re.search(r'<img[^>]+src="(https://img\.itch\.zone/[^"]+)"', cel)
+            jogos.append((link, titulo, capa.group(1) if capa else ""))
+            vistos.add(link)
+            novos += 1
+        if novos == 0 or 'class="next_page' not in pg and "?page=%d" % (pagina + 1) not in pg:
+            break
+        pagina += 1
+    return jogos
+
+
+def info_do_jogo(link, cache):
+    if link in cache and "unity" in cache[link]:
+        return cache[link]
+    pg = baixar(link)
+    emb = re.search(r'https://html(?:-classic)?\.itch\.zone/html/\d+/[^"&\s]*?index\.html', pg)
+    if not emb:
+        emb = re.search(r'(?:https:)?//html(?:-classic)?\.itch\.zone/html/\d+/[^"&\s]*', html.unescape(pg))
+    capa = re.search(r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"', pg)
+    info = {"embed": (emb.group(0) if emb else "").replace("//html", "https://html", 1) if emb and emb.group(0).startswith("//") else (emb.group(0) if emb else ""),
+            "capa": capa.group(1) if capa else ""}
+    tam = re.search(r'init_HtmlEmbed\([^,]+,\s*\{[^}]*"height":(\d+)[^}]*"width":(\d+)', pg) or \
+          re.search(r'init_HtmlEmbed\([^,]+,\s*\{[^}]*"width":(\d+)[^}]*"height":(\d+)', pg)
+    if tam:
+        a, b = int(tam.group(1)), int(tam.group(2))
+        info["h"], info["w"] = (a, b) if '"height":' + tam.group(1) in tam.group(0) and tam.group(0).index('"height"') < tam.group(0).index('"width"') else (b, a)
+    else:
+        info["w"] = info["h"] = 0
+    # Jogos Unity: guarda o tamanho do canvas para esconder a faixa de baixo (logo + botão)
+    info["unity"] = []
+    if info["embed"]:
+        try:
+            idx = baixar(info["embed"])
+            u = re.search(r'id="unity-canvas"[^>]*?width=["\']?(\d+)["\']?[^>]*?height=["\']?(\d+)', idx)
+            if u and 'id="unity-footer"' in idx:
+                info["unity"] = [int(u.group(1)), int(u.group(2))]
+        except Exception:
+            pass
+    cache[link] = info
+    return info
+
+
+MOLDURA = os.path.join(HOME, ".var/app/org.chromium.Chromium/cozy-jogo.html")
+
+
+def url_tela_cheia(info):
+    """Abre o jogo dentro de cozy-jogo.html, que amplia o jogo para a tela toda."""
+    from urllib.parse import quote
+    if info.get("unity"):
+        uw, uh = info["unity"]
+        # a página do Unity centraliza canvas + faixa (38 px); mostra só o canvas
+        return "file://%s#w=%d&h=%d&fh=%d&u=%s" % (MOLDURA, uw, uh, uh + 38, quote(info["embed"], safe=""))
+    return "file://%s#w=%d&h=%d&u=%s" % (MOLDURA, info.get("w", 0), info.get("h", 0), quote(info["embed"], safe=""))
+
+
+def slug(link):
+    m = re.match(r"https?://([a-z0-9-]+)\.itch\.io/([a-z0-9_-]+)", link)
+    s = (m.group(2) if m else re.sub(r"[^a-z0-9]+", "-", link.lower()))[:60]
+    return re.sub(r"[^A-Za-z0-9_-]", "-", s)
+
+
+def salvar_capa(url, nome):
+    if not url:
+        return ""
+    os.makedirs(COVERS, exist_ok=True)
+    ext = os.path.splitext(url.split("?")[0])[1].lower()
+    ext = ext if ext in (".png", ".jpg", ".jpeg", ".gif", ".webp") else ".png"
+    arq = nome[:20] + ext  # "img:covers/" + nome cabe nos 32 caracteres do emoji
+    caminho = os.path.join(COVERS, arq)
+    if not os.path.exists(caminho):
+        try:
+            with open(caminho, "wb") as f:
+                f.write(baixar(url, binario=True))
+        except Exception as e:  # sem capa, usa emoji
+            log(f"  capa falhou ({e})")
+            return ""
+    return "img:covers/" + arq
+
+
+def gravar_json(caminho, dados):
+    os.makedirs(os.path.dirname(caminho), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(caminho))
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(dados, f, indent=2, ensure_ascii=False)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, caminho)
+
+
+def main():
+    try:
+        colecoes = json.load(open(COLECOES, encoding="utf-8"))
+    except OSError:
+        log("sem itch-colecoes.json; nada a fazer")
+        return 0
+    try:
+        cache = json.load(open(CACHE, encoding="utf-8"))
+    except (OSError, ValueError):
+        cache = {}
+
+    por_perfil = {}
+    for perfil_id, url in colecoes.items():
+        try:
+            jogos = jogos_da_colecao(url)
+        except Exception as e:
+            log(f"{perfil_id}: não consegui ler a coleção ({e}); mantendo como está")
+            continue
+        tiles = []
+        for link, titulo, capa_lista in jogos:
+            try:
+                info = info_do_jogo(link, cache)
+            except Exception as e:
+                log(f"  {titulo}: erro ao ler o jogo ({e})")
+                continue
+            if not info["embed"]:
+                log(f"  {titulo}: sem versão de navegador, ignorado")
+                continue
+            s = slug(link)
+            icone = salvar_capa(capa_lista or info["capa"], s) or "🎮"
+            tiles.append({"id": "itch-" + s, "label": titulo[:60], "emoji": icone,
+                          "cmd": ["navegador-jogos", url_tela_cheia(info)], "visible": True})
+        por_perfil[perfil_id] = tiles
+        log(f"{perfil_id}: {len(tiles)} jogo(s) de navegador na coleção")
+    gravar_json(CACHE, cache)
+
+    if not por_perfil:
+        return 0
+    cfg = json.load(open(CFG, encoding="utf-8"))
+    mudou = False
+    for p in cfg.get("profiles", []):
+        if p.get("id") not in por_perfil:
+            continue
+        antigos = {t["id"]: t for t in p.get("tiles", []) if t.get("id", "").startswith("itch-")}
+        novos = []
+        for t in por_perfil[p["id"]]:
+            velho = antigos.get(t["id"], {})
+            # preserva o que os pais mudaram (visível, categoria, nome)
+            t["visible"] = velho.get("visible", True)
+            t["category"] = velho.get("category", "jogos")
+            if velho.get("label"):
+                t["label"] = velho["label"]
+            novos.append({**velho, **t})
+        resto = [t for t in p.get("tiles", []) if not t.get("id", "").startswith("itch-")]
+        lista = novos + resto
+        if lista != p.get("tiles"):
+            p["tiles"] = lista
+            mudou = True
+    if mudou:
+        gravar_json(CFG, cfg)
+        log("config.json atualizado")
+    else:
+        log("nada mudou")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: abre o Tux Paint novo (Flathub) em tela cheia, sem trocar a resolução.
+exec flatpak run org.tuxpaint.Tuxpaint --fullscreen=native

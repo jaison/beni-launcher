@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: Luanti (mundo de blocos parecido com Minecraft).
+exec flatpak run org.luanti.luanti

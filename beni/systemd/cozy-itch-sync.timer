@@ -1,0 +1,9 @@
+[Unit]
+Description=Cozy Kids: sincroniza coleções do itch.io a cada 30 min
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+
+[Install]
+WantedBy=timers.target

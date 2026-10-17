@@ -1,0 +1,9 @@
+#!/bin/sh
+# Cozy Kids Launcher: SuperTuxKart sempre na resolução atual da tela (se o jogo trocar a
+# resolução, a tela do notebook pode ficar apagada ao fechar).
+RES=$(xrandr 2>/dev/null | awk '/\*/{print $1; exit}'); RES=${RES:-1366x768}; W=${RES%x*}; H=${RES#*x}
+CFG="$HOME/.config/supertuxkart/config-0.10/config.xml"
+if [ -f "$CFG" ]; then
+  sed -i -E "s/(real_width|prev_real_width|[^_]width)=\"[0-9]+\"/\1=\"$W\"/g; s/(real_height|prev_real_height|[^_]height)=\"[0-9]+\"/\1=\"$H\"/g" "$CFG"
+fi
+exec /usr/games/supertuxkart "$@"

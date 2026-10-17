@@ -123,8 +123,15 @@ function renderAdminSections(){
   document.getElementById('overviewTimerValue').textContent=(cfg.timerMinutes||0)>0
     ? String(cfg.timerMinutes)+' '+uiText.timerMinutes
     : uiText.timerOff;
+  if(cfg.categoryLimits&&cfg.categoryLimits.enabled){
+    const lim=cfg.categoryLimits, cats=lim.categories||{};
+    const parts=Object.keys(cats).filter(id=>cats[id].minutes!==null&&cats[id].minutes!==undefined)
+      .map(id=>(id==='jogos'?'🎮':id==='educativo'?'📚':'⭐')+' '+cats[id].minutes);
+    document.getElementById('overviewTimerValue').textContent=
+      (lim.totalMinutes!==null&&lim.totalMinutes!==undefined?lim.totalMinutes+' min/dia':'Limite diário')+(parts.length?' ('+parts.join(' · ')+')':'');
+  }
   document.getElementById('overviewAppearanceLabel').textContent=uiText.adminAppearance;
-  document.getElementById('overviewAppearanceValue').textContent=themeLabel(cfg.theme||'{{DEFAULT_THEME}}');
+  document.getElementById('overviewAppearanceValue').textContent=themeLabel(cfg.theme||'rosa');
   activateAdminSection(adminSection);
 }
 function renderAppearancePreview(){
@@ -133,10 +140,10 @@ function renderAppearancePreview(){
   const previewTitle=document.getElementById('appearancePreviewTitle');
   const previewGrid=document.getElementById('appearancePreviewGrid');
   if(!preview||!previewTitle||!previewGrid) return;
-  const themeId=document.getElementById('cfgTheme').value||cfg.theme||'{{DEFAULT_THEME}}';
+  const themeId=document.getElementById('cfgTheme').value||cfg.theme||'rosa';
   const theme=ALL_THEMES.find(item=>item.id===themeId)||ALL_THEMES[0];
   const layout=document.getElementById('cfgLayoutMode').value==='klein'?'klein':'gross';
-  const title=document.getElementById('cfgTitle').value||cfg.title||'{{DEFAULT_TITLE}}';
+  const title=document.getElementById('cfgTitle').value||cfg.title||'Hello Kiddo 🌈';
   const world=theme.type==='world';
   const motionInput=document.getElementById('cfgThemeMotionEnabled');
   const timeInput=document.getElementById('cfgThemeTimeOfDayEnabled');
@@ -332,7 +339,7 @@ function renderAdmin(){
   document.getElementById('tileVisibilityFilter').value=adminTileVisibility;
   document.getElementById('cfgTitle').value=cfg.title||'';
   renderProfileAdmin();
-  document.getElementById('cfgTheme').value=cfg.theme||'{{DEFAULT_THEME}}';
+  document.getElementById('cfgTheme').value=cfg.theme||'rosa';
   updateThemeDisplay();
   // Custom theme controls
   const ctp=document.getElementById('customThemePanel');
@@ -345,7 +352,7 @@ function renderAdmin(){
   document.getElementById('cfgCustomBtn').value=c.btn||'#e85a9c';
   document.getElementById('cfgCustomCard').value=c.card||'#ffffff';
   document.getElementById('cfgCustomBg').value=cfg.customBackground||'';
-  document.getElementById('cfgLayoutMode').value=cfg.layoutMode||'{{DEFAULT_LAYOUT}}';
+  document.getElementById('cfgLayoutMode').value=cfg.layoutMode||'gross';
   document.getElementById('cfgThemeMotionEnabled').checked=cfg.themeMotionEnabled===true;
   document.getElementById('cfgThemeTimeOfDayEnabled').checked=cfg.themeTimeOfDayEnabled===true;
   document.getElementById('cfgSoundFeedbackEnabled').checked=cfg.soundFeedbackEnabled===true;
@@ -355,6 +362,7 @@ function renderAdmin(){
   document.getElementById('cfgAccessibilityHighContrast').checked=cfg.accessibilityHighContrast===true;
   document.getElementById('cfgAccessibilityReducedMotion').checked=cfg.accessibilityReducedMotion===true;
   document.getElementById('cfgAccessibilityKeyboardFocus').checked=cfg.accessibilityKeyboardFocus===true;
+  document.getElementById('cfgChoiceScreenEnabled').checked=cfg.choiceScreenEnabled!==false;
   document.getElementById('speechFeedbackStatus').textContent=features.speechFeedbackAvailable
     ?(uiText.speechAvailable||'Local Linux speech is available on this device.')
     :(uiText.speechUnavailable||'Install Speech Dispatcher or eSpeak to use speech feedback.');
@@ -362,7 +370,7 @@ function renderAdmin(){
   const browserSel=document.getElementById('cfgBrowser');
   browserSel.innerHTML='';
   const installedBrowsers=browserOptions.filter(b=>b.installed);
-  const currentBrowser=cfg.browser||'{{BROWSER_CMD}}';
+  const currentBrowser=cfg.browser||'firefox';
   if(installedBrowsers.length===0){
     const opt=document.createElement('option');
     opt.value=currentBrowser;
@@ -381,11 +389,13 @@ function renderAdmin(){
   }else if(installedBrowsers.length>0){
     browserSel.value=installedBrowsers[0].name;
   }
-  document.getElementById('browserHint').textContent=interfaceLanguage()==='de'
+  document.getElementById('browserHint').textContent=interfaceLanguage()==='pt'
+    ? 'A mudança vale a partir do próximo login.'
+    : interfaceLanguage()==='de'
     ? 'Änderung wirkt erst nach erneutem Login.'
     : 'Changes take effect after the next login.';
-  document.getElementById('cfgParentLabel').value=cfg.parentLabel||'{{DEFAULT_PARENT_LABEL}}';
-  document.getElementById('cfgExitLabel').value=cfg.exitLabel||'{{DEFAULT_EXIT_LABEL}}';
+  document.getElementById('cfgParentLabel').value=cfg.parentLabel||'Parent';
+  document.getElementById('cfgExitLabel').value=cfg.exitLabel||'Exit kids mode';
   setIconLabel(document.getElementById('checkUpdateBtn'),'refresh',uiText.updateCheck||'Check for updates');
   document.getElementById('versionDisplay').textContent=(uiText.versionLabel||'Version')+': '+installedVersion;
   clearUiState(document.getElementById('updateMsg'));
@@ -628,6 +638,7 @@ function renderAdmin(){
   renderAdminPageNav(filteredTileIndexes.length);
   renderRecommendations();
   renderScheduleControls();
+  if(typeof renderUsageLimitSettings==='function') renderUsageLimitSettings();
   renderActivityDashboard();
   renderAdminSections();
   renderAppearancePreview();
@@ -685,9 +696,9 @@ function renderRecommendations(){
     const card=document.createElement('div'); card.className='rec-card';
     const em=createTileVisual(rec.emoji,'emoji');
     const nm=document.createElement('div'); nm.className='name';
-    nm.textContent=(cfg.language==='de'?rec.name_de:rec.name_en)||(cfg.language==='de'?rec.label_de:rec.label_en)||rec.id;
+    nm.textContent=recText(rec,'name')||recText(rec,'label')||rec.id;
     const desc=document.createElement('div'); desc.className='desc';
-    desc.textContent=(cfg.language==='de'?rec.desc_de:rec.desc_en)||'';
+    desc.textContent=recText(rec,'desc')||'';
     const st=document.createElement('div'); st.className='status '+(rec.installed?'installed':'missing');
     st.textContent=rec.installed?(uiText.installed||'installed'):(uiText.notInstalled||'not installed');
     const actions=document.createElement('div'); actions.className='actions';
@@ -697,7 +708,7 @@ function renderRecommendations(){
       actions.appendChild(btn);
     } else if(rec.installed){
       const btn=document.createElement('button'); btn.className='smallbtn'; setIconLabel(btn,'add',uiText.addTile||'Add tile');
-      btn.onclick=()=>{ cfg.tiles.push({ id:rec.id, label:(cfg.language==='de'?rec.label_de:rec.label_en)||rec.id, emoji:rec.emoji||'✨', cmd:rec.cmd||[], visible:true }); renderAll(); persistConfig(); };
+      btn.onclick=()=>{ cfg.tiles.push({ id:rec.id, label:recText(rec,'label')||rec.id, emoji:rec.emoji||'✨', cmd:rec.cmd||[], visible:true }); renderAll(); persistConfig(); };
       actions.appendChild(btn);
     } else {
       const btn=document.createElement('button'); btn.className='smallbtn'; setIconLabel(btn,'download',uiText.install||'Install');
@@ -708,13 +719,17 @@ function renderRecommendations(){
     grid.appendChild(card);
   }
   panel.appendChild(grid);
-  const disclaimer=document.createElement('div'); disclaimer.className='muted'; disclaimer.style.marginTop='14px'; disclaimer.style.fontSize='.85rem'; disclaimer.textContent=cfg.language==='de'?'Diese Programme stammen aus externen Quellen und stehen in keiner Verbindung zum Cozy Kids Launcher Projekt.':'This software comes from external sources and is not affiliated with the Cozy Kids Launcher project.';
+  const disclaimer=document.createElement('div'); disclaimer.className='muted'; disclaimer.style.marginTop='14px'; disclaimer.style.fontSize='.85rem'; disclaimer.textContent=cfg.language==='pt'?'Estes programas vêm de fontes externas e não têm ligação com o projeto Cozy Kids Launcher.':cfg.language==='de'?'Diese Programme stammen aus externen Quellen und stehen in keiner Verbindung zum Cozy Kids Launcher Projekt.':'This software comes from external sources and is not affiliated with the Cozy Kids Launcher project.';
   panel.appendChild(disclaimer);
+}
+function recText(rec,field){
+  const language=cfg&&cfg.language;
+  return (language==='de'||language==='pt'?rec[field+'_'+language]:'')||rec[field+'_en'];
 }
 let pendingInstallCommand='';
 function triggerInstall(rec){
   pendingInstallCommand='sudo apt install -y '+rec.package;
-  document.getElementById('installTitle').textContent=(uiText.install||'Install')+' '+((cfg.language==='de'?rec.name_de:rec.name_en)||(cfg.language==='de'?rec.label_de:rec.label_en)||rec.id);
+  document.getElementById('installTitle').textContent=(uiText.install||'Install')+' '+(recText(rec,'name')||recText(rec,'label')||rec.id);
   fetch('/api/install-package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({package:rec.package})})
     .then(r=>r.json()).then(data=>{
       const msg=document.getElementById('installMessage');
@@ -725,7 +740,7 @@ function triggerInstall(rec){
       }
       if(data.command) pendingInstallCommand=data.command;
       document.getElementById('installCommand').textContent=pendingInstallCommand;
-      const hint=cfg.language==='de'?rec.hint_de:rec.hint_en;
+      const hint=recText(rec,'hint');
       const hintEl=document.getElementById('installHint');
       hintEl.textContent=hint||'';
       hintEl.style.display=hint?'block':'none';
@@ -733,7 +748,7 @@ function triggerInstall(rec){
     }).catch(()=>{
       document.getElementById('installMessage').textContent=uiText.installManual||'Please run this command in a terminal:';
       document.getElementById('installCommand').textContent=pendingInstallCommand;
-      const hint=cfg.language==='de'?rec.hint_de:rec.hint_en;
+      const hint=recText(rec,'hint');
       const hintEl=document.getElementById('installHint');
       hintEl.textContent=hint||'';
       hintEl.style.display=hint?'block':'none';
@@ -759,7 +774,7 @@ async function autoScanRecommendations(){
   for(const rec of recommendations){
     if(existingIds.has(rec.id)) continue;
     if(rec.installed && !existingCmds.has(JSON.stringify(rec.cmd||[]))){
-      cfg.tiles.push({ id:rec.id, label:(cfg.language==='de'?rec.label_de:rec.label_en)||rec.id, emoji:rec.emoji||'✨', cmd:rec.cmd||[], visible:true });
+      cfg.tiles.push({ id:rec.id, label:recText(rec,'label')||rec.id, emoji:rec.emoji||'✨', cmd:rec.cmd||[], visible:true });
       added=true;
     }
   }

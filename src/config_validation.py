@@ -14,6 +14,7 @@ from profile_config import (
     profile_summaries,
 )
 from schedule_rules import validate_app_availability, validate_schedule
+from usage_limits import validate_category_limits, validate_tile_category
 
 
 MAX_TILES = 200
@@ -73,6 +74,10 @@ def _validate_flat_config(data, existing_pin_hash="", allow_pin_hash=False):
             "cmd": clean_command,
             "visible": visible,
         }
+        if "category" in tile:
+            validated_tile["category"] = validate_tile_category(
+                tile["category"], f"tiles[{index}].category"
+            )
         if "browserAllowedOrigins" in tile:
             validated_tile["browserAllowedOrigins"] = normalize_browser_allowed_origins(
                 tile["browserAllowedOrigins"]
@@ -96,8 +101,8 @@ def _validate_flat_config(data, existing_pin_hash="", allow_pin_hash=False):
     if "name" in result and not result["name"]:
         raise ValueError("name must not be empty")
 
-    if "language" in result and result["language"] not in ("de", "en"):
-        raise ValueError("language must be 'de' or 'en'")
+    if "language" in result and result["language"] not in ("de", "en", "pt"):
+        raise ValueError("language must be 'de', 'en' or 'pt'")
     if "layoutMode" in result and result["layoutMode"] not in ("gross", "klein"):
         raise ValueError("layoutMode must be 'gross' or 'klein'")
     if "browser" in result and result["browser"] and not re.fullmatch(
@@ -133,6 +138,7 @@ def _validate_flat_config(data, existing_pin_hash="", allow_pin_hash=False):
         "accessibilityHighContrast",
         "accessibilityReducedMotion",
         "accessibilityKeyboardFocus",
+        "choiceScreenEnabled",
     ):
         if field in result and not isinstance(result[field], bool):
             raise ValueError(f"{field} must be a boolean")
@@ -185,6 +191,9 @@ def _validate_flat_config(data, existing_pin_hash="", allow_pin_hash=False):
 
     if "weeklySchedule" in result:
         result["weeklySchedule"] = validate_schedule(result["weeklySchedule"])
+
+    if "categoryLimits" in result:
+        result["categoryLimits"] = validate_category_limits(result["categoryLimits"])
 
     if "appAvailability" in result:
         result["appAvailability"] = validate_app_availability(

@@ -102,6 +102,15 @@ function localTileIconName(value){
 }
 
 function createTileVisual(value,className='emoji'){
+  // Capa de jogo (ex.: itch.io): "img:covers/arquivo.png" servido de /themes/
+  if(typeof value==='string'&&/^img:[A-Za-z0-9_\-\/.]+$/.test(value)&&!value.includes('..')){
+    const img=document.createElement('img');
+    img.className=className+' tile-cover';
+    img.src='/themes/'+value.slice(4);
+    img.alt='';
+    img.draggable=false;
+    return img;
+  }
   const iconName=localTileIconName(value||'✨');
   if(iconName){
     return createLocalIcon(iconName,className+' local-tile-icon');

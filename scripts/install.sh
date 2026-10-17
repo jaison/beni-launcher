@@ -1648,6 +1648,8 @@ install -m 0644 "$SRC_DIR/process_state.py" "$APP_ROOT/process_state.py"
 install -m 0755 "$SRC_DIR/process_supervisor.py" "$APP_ROOT/process_supervisor.py"
 install -m 0644 "$SRC_DIR/timer_state.py" "$APP_ROOT/timer_state.py"
 install -m 0644 "$SRC_DIR/update_manager.py" "$APP_ROOT/update_manager.py"
+# Beni Launcher: limites de tempo por categoria
+install -m 0644 "$SRC_DIR/usage_limits.py" "$APP_ROOT/usage_limits.py"
 render_template "$SRC_DIR/index.html" "$INDEX_FILE" 0644
 render_template "$SRC_DIR/frontend/design-system.css" "$FRONTEND_DESIGN_SYSTEM_FILE" 0644
 render_template "$SRC_DIR/frontend/styles.css" "$FRONTEND_STYLES_FILE" 0644
@@ -1656,6 +1658,11 @@ render_template "$SRC_DIR/frontend/localization.js" "$FRONTEND_LOCALIZATION_FILE
 install -d -m 0755 "$FRONTEND_LOCALES_DIR"
 install -m 0644 "$SRC_DIR/frontend/locales/de.json" "$FRONTEND_LOCALES_DIR/de.json"
 install -m 0644 "$SRC_DIR/frontend/locales/en.json" "$FRONTEND_LOCALES_DIR/en.json"
+install -m 0644 "$SRC_DIR/frontend/locales/pt.json" "$FRONTEND_LOCALES_DIR/pt.json"
+# Beni Launcher: arquivos novos do frontend (temas extras, limites, tela Aprender/Jogar)
+for beni_file in cozy-temas.css usage-limits.css usage-limits.js escolha.css escolha.js; do
+  install -m 0644 "$SRC_DIR/frontend/$beni_file" "$APP_ROOT/frontend/$beni_file"
+done
 render_template "$SRC_DIR/frontend/icons.js" "$FRONTEND_ICONS_FILE" 0644
 render_template "$SRC_DIR/frontend/dialogs.js" "$FRONTEND_DIALOGS_FILE" 0644
 install -m 0644 "$SRC_DIR/frontend/theme-runtime.js" "$FRONTEND_THEME_RUNTIME_FILE"

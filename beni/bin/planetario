@@ -1,0 +1,3 @@
+#!/bin/sh
+# Cozy Kids Launcher: Stellarium (planetário) em tela cheia.
+exec stellarium --full-screen yes

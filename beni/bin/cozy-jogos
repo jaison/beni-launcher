@@ -1,0 +1,3 @@
+#!/bin/sh
+# Abre a lista de jogos do Cozy Jogos (snes ou ps1). Usado pelos ícones do Cozy Kids Launcher.
+exec python3 "$HOME/.local/share/cozy-jogos/jogos.py" "$@"

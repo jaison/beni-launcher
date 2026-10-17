@@ -1,0 +1,14 @@
+#!/bin/sh
+# Cozy Kids Launcher: abre jogos de navegador (ex.: Universo Rabisco) no Chromium,
+# que neste notebook roda os jogos 3D quase 2x mais rápido que o Firefox.
+# Uso: navegador-jogos <url>
+# Tela de carregamento por cima até o navegador estar em tela cheia
+python3 "$HOME/.local/lib/cozy-fixes/carregando.py" chromium >/dev/null 2>&1 &
+exec flatpak run org.chromium.Chromium \
+  --user-data-dir="$HOME/.var/app/org.chromium.Chromium/cozy-jogos" \
+  --kiosk --no-first-run --no-default-browser-check --noerrdialogs \
+  --disable-session-crashed-bubble --hide-crash-restore-bubble \
+  --disable-translate --disable-features=Translate,TranslateUI --password-store=basic \
+  --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy \
+  --autoplay-policy=no-user-gesture-required --lang=pt-BR \
+  "$1"

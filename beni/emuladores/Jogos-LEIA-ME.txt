@@ -1,0 +1,24 @@
+JOGOS DE SUPER NINTENDO E PLAYSTATION (Cozy Kids Launcher)
+==========================================================
+
+Onde colocar os jogos (use as suas cópias):
+  Super Nintendo:  ~/Jogos/SNES   (arquivos .sfc, .smc ou .zip)
+  PlayStation:     ~/Jogos/PS1    (de preferência .cue + .bin; também .iso, .pbp)
+
+Capas (opcional): coloque uma imagem com o MESMO nome do jogo, na mesma pasta.
+  Exemplo: "Super Mario World.sfc"  +  "Super Mario World.png"
+  O nome que aparece na tela é o nome do arquivo, sem o que estiver entre ( ) ou [ ].
+
+BIOS do PlayStation (recomendado): coloque o arquivo da BIOS em ~/Jogos/PS1/BIOS
+  com um destes nomes: scph1001.bin, scph5501.bin, scph7001.bin ou scph5502.bin.
+  Sem BIOS, o emulador usa uma BIOS simulada (HLE): vários jogos funcionam, mas alguns não.
+
+Como a criança joga:
+  - Toca no ícone "Super Nintendo" ou "PlayStation" no launcher e escolhe o jogo.
+  - Setas + Enter, mouse ou controle USB funcionam na lista.
+  - Para sair do jogo: tecla Esc (Super Nintendo) ou Start+Select no controle.
+  - O botão X no canto superior esquerdo fecha tudo e volta ao menu.
+
+Saves: ~/Jogos/.saves
+
+Emuladores: RetroArch + snes9x (Super Nintendo) e PCSX-Reloaded (PlayStation).
