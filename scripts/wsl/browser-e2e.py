@@ -101,6 +101,8 @@ def write_demo_config(config_path, browser_name):
         "themeTimeOfDayEnabled": False,
         "layoutMode": "gross",
         "currentPage": 0,
+        # Beni Launcher: estes cenários testam a grade completa do original
+        "choiceScreenEnabled": False,
         "timerMinutes": 0,
         "timerWarningMinutes": 5,
         "tiles": [

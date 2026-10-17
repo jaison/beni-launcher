@@ -33,7 +33,8 @@ class ScreenshotGalleryTests(unittest.TestCase):
             self.assertEqual(png_dimensions(screenshot_root / name), (1440, 900), name)
 
     def test_readme_and_guide_reference_every_image(self):
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        # Beni Launcher: o README.md agora é o do fork; a galeria original está no README.original.md
+        readme = (ROOT / "README.original.md").read_text(encoding="utf-8")
         guide = (ROOT / "docs" / "SCREENSHOTS.md").read_text(encoding="utf-8")
         for name in EXPECTED_SCREENSHOTS:
             self.assertIn(f"screenshots/{name}", readme)
