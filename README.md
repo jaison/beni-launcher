@@ -4,7 +4,7 @@ Um menu infantil em tela cheia para notebooks antigos com Linux, pensado para cr
 Ao ligar o notebook, a criança vê **"O que você quer fazer? 📚 Aprender / 🎮 Jogar"**, escolhe, e só
 encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário por categoria**.
 
-![Tela inicial](beni/prints/01-escolha-bea.png)
+![Tela inicial](beni/prints/01-escolha-beni.png)
 
 > **Este projeto é uma adaptação do [Cozy Kids Launcher](https://github.com/TrissyGE/cozy-kids-launcher)**,
 > criado por Tristan e colaboradores (licença MIT). Todo o núcleo, como o servidor local, a
