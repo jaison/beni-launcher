@@ -32,6 +32,7 @@ class StableMainReleaseContractTests(unittest.TestCase):
         self.assertIn("secrets.RELEASE_DEPLOY_KEY", workflow)
         self.assertIn('git ls-remote "git@github.com:$GITHUB_REPOSITORY.git"', workflow)
 
+    @unittest.skip("Beni Launcher: o workflow stable-main do projeto original foi removido no fork")
     def test_stable_main_check_compares_commit_with_latest_release_tag(self):
         workflow = (
             REPOSITORY_ROOT / ".github" / "workflows" / "stable-main.yml"
