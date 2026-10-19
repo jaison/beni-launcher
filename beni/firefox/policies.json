@@ -1,0 +1,14 @@
+{
+  "policies": {
+    "WebsiteFilter": {
+      "Block": [
+        "*://www.escolagames.com.br/jogos-divertidos*",
+        "*://escolagames.com.br/jogos-divertidos*",
+        "*://www.escolagames.com.br/diversao/*",
+        "*://escolagames.com.br/diversao/*",
+        "*://www.bestschoolgames.com/*",
+        "*://bestschoolgames.com/*"
+      ]
+    }
+  }
+}

@@ -71,4 +71,5 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 - XFCE: remove os atalhos Ctrl+Alt+Del e Ctrl+Alt+L (bloqueio); desliga o bloqueio ao suspender, ao fechar a sessão e depois do protetor de tela (light-locker); deixa os painéis em "esconder sempre".
 - Firefox do launcher: `accessibility.browsewithcaret` desligado (era a linha vertical piscando).
 - Firefox dos sites (Escola Games etc.): bloqueador de anúncios **uBlock Origin** (`beni/firefox/`), instalado só nesse perfil.
+- Escola Games: o menu "Jogos" (`/jogos-divertidos`, `/diversao/…`) e "Jogos em inglês" ficam escondidos (`beni/firefox/userContent.css`) e bloqueados (`/etc/firefox/policies/policies.json`). Os jogos educativos (`/jogos/…`) continuam.
 - Autostart `~/.config/autostart/cozy-kids-launcher-autostart.desktop` → `cozy-iniciar`.

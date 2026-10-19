@@ -107,6 +107,12 @@ cp "$REPO/beni/firefox/uBlock0@raymondhill.net.xpi" "$P/extensions/"
 grep -q autoDisableScopes "$P/user.js" 2>/dev/null || printf '%s\n' \
   'user_pref("extensions.autoDisableScopes", 0);' \
   'user_pref("extensions.enabledScopes", 15);' >> "$P/user.js"
+# Escola Games conta como "Aprender": esconde o menu "Jogos" (diversão) e bloqueia essas páginas
+mkdir -p "$P/chrome"
+cp "$REPO/beni/firefox/userContent.css" "$P/chrome/"
+grep -q legacyUserProfileCustomizations "$P/user.js" || \
+  echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$P/user.js"
+sudo install -D -m 0644 "$REPO/beni/firefox/policies.json" /etc/firefox/policies/policies.json
 
 passo "Abrir sozinho no login + sincronizar o itch.io a cada 30 min"
 mkdir -p "$HOME/.config/autostart" "$HOME/.config/systemd/user"

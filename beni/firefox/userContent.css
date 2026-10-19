@@ -1,0 +1,9 @@
+/* Escola Games: fica só a parte de aprender (sem o menu "Jogos" de diversão) */
+@-moz-document domain("escolagames.com.br") {
+  a[href*="/jogos-divertidos"], a[href*="bestschoolgames.com"],
+  [data-hideable-key="jogos-divertidos"], [data-hideable-key="jogos-em-ingles"],
+  .swiper-slide:has(a[href*="/diversao/"]), a[href*="/diversao/"],
+  [data-scrollable-list]:has(a[href*="/diversao/"]):not(:has(a[href*="/jogos/"], a[href*="/recursos-educacionais/"])) {
+    display: none !important;
+  }
+}
