@@ -420,7 +420,7 @@ function renderUsageLimitSettings(){
 const LEARNING_RULE_DEFAULTS={enabled:false,goalPercent:50,reducedPercent:50,mode:'fixed'};
 function percentInput(value,min,label,onchange){
   const input=document.createElement('input');
-  input.type='number'; input.min=String(min); input.max='100'; input.step='5';
+  input.type='number'; input.min=String(min); input.max='100'; input.step='1';
   input.value=String(value);
   input.setAttribute('aria-label',label);
   input.onchange=()=>{
