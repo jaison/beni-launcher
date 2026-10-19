@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ciências (PhET)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Ubuntu", "Noto Sans", sans-serif;
+    background: radial-gradient(circle at 20% 15%, #1e3a8a 0, #0f172a 60%);
+    color: #f8fafc;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5vh; padding: 4vh 4vw;
+  }
+  h1 { margin: 0; font-size: clamp(28px, 5vh, 48px); text-align: center; }
+  .sub { margin: -3vh 0 0; font-size: clamp(16px, 2.6vh, 24px); color: #cbd5e1; text-align: center; }
+  .temas {
+    display: grid; gap: 2.4vw; width: min(100%, 1250px);
+    grid-template-columns: repeat(5, 1fr);
+  }
+  a.tema {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vh;
+    aspect-ratio: 3 / 4; border-radius: 28px; text-decoration: none; color: #fff;
+    background: var(--cor); box-shadow: 0 10px 0 var(--sombra), 0 18px 30px rgba(0,0,0,.35);
+    transition: transform .12s, box-shadow .12s; outline: none;
+  }
+  a.tema:hover, a.tema:focus { transform: translateY(-6px) scale(1.03); box-shadow: 0 16px 0 var(--sombra), 0 26px 40px rgba(0,0,0,.4); }
+  a.tema:focus { outline: 6px solid #fde047; outline-offset: 4px; }
+  a.tema:active { transform: translateY(6px); box-shadow: 0 4px 0 var(--sombra); }
+  .icone { font-size: clamp(56px, 13vh, 120px); line-height: 1; }
+  .nome { font-size: clamp(20px, 3.6vh, 34px); font-weight: 700; text-align: center; line-height: 1.1; }
+  .fisica   { --cor: #f59e0b; --sombra: #b45309; }
+  .mat      { --cor: #3b82f6; --sombra: #1d4ed8; }
+  .quimica  { --cor: #a855f7; --sombra: #7e22ce; }
+  .terra    { --cor: #06b6d4; --sombra: #0e7490; }
+  .bio      { --cor: #22c55e; --sombra: #15803d; }
+  @media (max-width: 800px) { .temas { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+  <h1>🔬 O que você quer explorar hoje?</h1>
+  <p class="sub">Experimentos de ciências do PhET para o Ensino Fundamental 1</p>
+  <nav class="temas">
+    <a class="tema fisica"  data-tema="physics"><span class="icone">⚡</span><span class="nome">Física</span></a>
+    <a class="tema mat"     data-tema="math-and-statistics"><span class="icone">🔢</span><span class="nome">Matemática</span></a>
+    <a class="tema quimica" data-tema="chemistry"><span class="icone">🧪</span><span class="nome">Química</span></a>
+    <a class="tema terra"   data-tema="earth-and-space"><span class="icone">🌍</span><span class="nome">Terra e Espaço</span></a>
+    <a class="tema bio"     data-tema="biology"><span class="icone">🌱</span><span class="nome">Biologia</span></a>
+  </nav>
+<script>
+  // Nível fixo: Ensino Fundamental 1 (no PhET, "elementary-school").
+  // Para mudar o nível, troque por middle-school (Fundamental 2) ou high-school (Médio).
+  var NIVEL = "elementary-school";
+  var temas = document.querySelectorAll("a.tema");
+  temas.forEach(function (a) {
+    a.href = "https://phet.colorado.edu/pt_BR/simulations/filter?subjects=" + a.dataset.tema +
+             "&levels=" + NIVEL + "&type=html,prototype";
+  });
+  // Teclado/controle: setas andam entre os temas, Enter abre.
+  var i = 0; temas[0].focus();
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") i = (i + 1) % temas.length;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") i = (i + temas.length - 1) % temas.length;
+    else return;
+    temas[i].focus(); e.preventDefault();
+  });
+</script>
+</body>
+</html>

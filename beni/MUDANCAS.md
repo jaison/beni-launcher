@@ -16,6 +16,7 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 | `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Jogar" e lista filtrada por categoria. |
 | `frontend/cozy-temas.css` | Temas heroi, blocos, ninja, gelo, casinha e castelo; estilos da prévia; capas de jogos nos tiles. |
 | `frontend/locales/pt.json` | Português do Brasil (todas as 237 chaves do inglês). |
+| `sites/phet.html` | Pré-tela do tile "Ciências (PhET)": Física, Matemática, Química, Terra e Espaço e Biologia. Cada uma abre o PhET já filtrado no Ensino Fundamental 1 (para mudar o nível, troque `NIVEL` no arquivo). Servida pelo próprio launcher em `http://127.0.0.1:38431/sites/phet.html`. |
 | `../themes/*.svg`, `../themes/fonts/` | Fundos dos temas novos e fontes (OFL). |
 
 ## Arquivos alterados (`src/`)
