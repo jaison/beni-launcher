@@ -128,6 +128,52 @@ Os pais mudam qualquer app de categoria em Pais → Tempo de tela.
 - **Coleções do itch.io**: cada criança tem uma coleção pública. Jogo adicionado na coleção vira ícone (com capa), e jogo removido some. A sincronização roda no login e a cada 30 min, então os pais testam antes e só então liberam.
 - Em Pais → Aparência → **Tela inicial**, você liga ou desliga a pergunta Aprender/Passatempo/Jogar em cada perfil.
 
+### 🔄 Atualizações automáticas
+- O notebook procura uma **Release nova** deste repositório no GitHub de hora em hora e baixa sozinho. Commits no `main` **não** chegam às crianças; só Releases.
+- **Quando instala**:
+  - **ao ligar o notebook**, antes de o menu aparecer (padrão);
+  - **de madrugada (2h–5h)**, se o notebook ficar sempre ligado e ninguém estiver usando;
+  - **na hora**, se a Release tiver **`[forcar]`** nas notas. Ele espera nenhum app estar aberto, o menu fecha com o aviso "🔧 Atualizando o computador… volta em um minutinho!" e reabre sozinho.
+- A atualização traz código, apps novos (apt/Flathub), sites, regras do Firefox e do DNS e **mudanças de catálogo** (adicionar/remover jogos). O que os pais configuraram (limites, temas, PIN, logins) não é tocado.
+- Se a instalação falhar, ela **volta sozinha** para a versão anterior e não tenta de novo a mesma versão.
+- Em Pais → Sistema → **Ver atualizações** aparecem a versão instalada, a última verificação e se há uma versão baixada esperando.
+
+---
+
+## Publicar uma atualização (para o mantenedor)
+
+1. Faça as mudanças no repositório e teste num notebook com `./instalar.sh`.
+2. **Jogos/sites/apps novos ou removidos** precisam ir em **dois lugares**:
+   - em `beni/config/config.json`, que é o que um notebook **novo** recebe;
+   - numa **migração** em `beni/config/migracoes.json`, que é o que os notebooks **já entregues** aplicam, uma vez cada. Exemplo:
+     ```json
+     {"id": "2026-11-01-jogo-x", "descricao": "Jogo X no Passatempo",
+      "operacoes": [
+        {"op": "adicionar_tile", "perfis": "todos", "depois_de": "kiddogames",
+         "tile": {"id": "jogox", "label": "Jogo X", "emoji": "🧩",
+                  "cmd": ["special:external-browser:https://exemplo.org/"],
+                  "visible": true, "category": "passatempo"}},
+        {"op": "remover_tile", "id": "site-antigo"},
+        {"op": "atualizar_tile", "id": "phet", "campos": {"visible": false}},
+        {"op": "definir", "perfis": ["default"], "caminho": "categoryLimits.totalMinutes",
+         "valor": 60, "so_se_ausente": true}
+      ]}
+     ```
+     `perfis` aceita `"todos"` ou uma lista de ids (`default` = Beni, `child-2501513b5fcb` = Bea).
+     O `id` da migração nunca pode se repetir.
+   - Pacotes novos vão em `beni/sistema/pacotes-apt.txt` / `pacotes-flatpak.txt`.
+3. Suba o número em **`VERSION`** (ex.: `1.1.0`), faça o commit e o push.
+4. Crie a Release com a **tag igual à versão**:
+   ```bash
+   gh release create v1.1.0 --title "1.1.0" --notes "Jogo X no Passatempo"
+   # urgente (notebook sempre ligado instala já, sem esperar religar):
+   gh release create v1.1.1 --title "1.1.1" --notes "Correção do login [forcar]"
+   ```
+   A tag tem que bater com o `VERSION`, senão o notebook recusa o pacote. Rascunhos e pré-releases são ignorados.
+5. Para acompanhar num notebook: `beni-atualizar estado` e `/var/log/beni-atualizar.log`.
+
+O endereço do repositório e a janela da madrugada ficam em `/etc/beni-launcher/atualizar.conf`.
+
 ---
 
 ## Correções para notebooks antigos e jogos "rebeldes"
@@ -185,7 +231,8 @@ Em Mint Cinnamon/MATE quase tudo funciona, mas os ajustes de barra e bloqueio s�
    ./instalar.sh
    ```
    São uns 2–3 GB de downloads: apps do Flathub, Chromium e emuladores. O instalador também
-   configura o DNS com filtro, o bloqueador de anúncios e as políticas do Firefox.
+   configura o DNS com filtro, o bloqueador de anúncios, as políticas do Firefox e as
+   **atualizações automáticas**. A partir daí, o notebook se atualiza sozinho pelas Releases.
 3. Saia da sessão e entre de novo. O launcher abre sozinho.
 4. **Antes de entregar** para a criança:
    - **Pais → Sistema: crie o PIN dos pais.** Sem PIN, qualquer um entra no painel, sai do modo infantil, zera o tempo ou vê o e-mail das contas salvas.
@@ -196,7 +243,7 @@ Em Mint Cinnamon/MATE quase tudo funciona, mas os ajustes de barra e bloqueio s�
    - Troque as coleções do itch.io em `~/.config/cozy-kids-launcher/itch-colecoes.json`. O arquivo liga o **id do perfil** à URL pública da coleção.
 
 Rodar `./instalar.sh` de novo atualiza os arquivos e **não apaga** a configuração, os logins
-salvos nem os jogos. Use `./instalar.sh --sem-apps` para atualizar só o launcher, sem apt/flatpak.
+salvos nem os jogos. Use `./instalar.sh --sem-apps` para não mexer em apt/flatpak.
 
 ---
 
@@ -226,7 +273,8 @@ login → ~/.config/autostart → cozy-iniciar
 | `src/frontend/locales/pt.json` | tradução |
 | `beni/bin/` | atalhos dos apps, `cozy-itch-sync`, `navegador-jogos`, `cozy-iniciar` … → `~/.local/bin` |
 | `beni/firefox/` | uBlock Origin, CSS dos sites e políticas do Firefox (`/etc/firefox/policies`) |
-| `beni/sistema/` | DNS com filtro (systemd-resolved + NetworkManager) |
+| `beni/sistema/` | parte do sistema (`instalar-sistema.sh`: pacotes, Firefox, DNS com filtro) e o atualizador automático (`beni-atualizar` + serviços do systemd) |
+| `beni/ferramentas/migrar-config.py`, `beni/config/migracoes.json` | mudanças de catálogo aplicadas uma vez em cada notebook |
 | `beni/lib/cozy-fixes/` | `nograb.c` (compilado na instalação) e `carregando.py` |
 | `beni/cozy-jogos/jogos.py` | lista de jogos SNES/PS1 |
 | `beni/chromium/cozy-jogo.html` | moldura que amplia jogos de navegador |
@@ -240,9 +288,9 @@ O código ainda usa os nomes internos do original (`cozy-kids-launcher`, porta 3
 correções de lá.
 
 ### Testes
-`python3 -m unittest discover -s tests` roda **316 testes**, os do projeto original e os novos:
-limites por categoria e dia da semana, categorias que dividem tempo, reforço de aprendizagem e
-login automático. Três testes do original foram ajustados ao comportamento novo: textos já
+`python3 -m unittest discover -s tests` roda **329 testes**, os do projeto original e os novos:
+limites por categoria e dia da semana, categorias que dividem tempo, reforço de aprendizagem,
+login automático, atualizador e mudanças de catálogo. Três testes do original foram ajustados ao comportamento novo: textos já
 traduzidos e o campo `limitBlocked`.
 
 ---

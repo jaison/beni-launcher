@@ -54,6 +54,7 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 ## `scripts/` e `tests/`
 - `scripts/install.sh`: também copia `usage_limits.py`, `site_logins.py`, `sites/phet.html`, `pt.json` e os CSS/JS novos.
 - `tests/test_server.py`: 2 asserções ajustadas (texto já traduzido; campo `limitBlocked`).
+- `tests/test_atualizador.py` (novo): atualizador (versões, `[forcar]`, pacote, janela da madrugada, espera de app aberto), estado em Pais → Sistema e migrações de catálogo.
 - `tests/test_site_logins.py` (novo): login dos sites e perfis do Firefox por criança.
 - `tests/test_usage_limits.py` (novo): limites por dia da semana, pool e regra de aprendizado (regra desligada, meta cumprida/não cumprida, dia anterior sem uso, Aprender sem limite, Jogar sem limite, pool, dia da semana, modo proporcional, histórico na virada do dia e após reiniciar, arquivo antigo sem histórico, fechamento do app no limite reduzido).
 - `tests/test_config_validation.py`: validação de `categoryLimits.learningRule`.
@@ -96,4 +97,12 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 - Tiles **Autodraw** (autodraw.com) e **Colorir** (colorir-online.com), categoria Aprender. No `userContent.css`: o Colorir fica só com a parte de colorir (sem a barra de cima com Apps/Quem somos/Idiomas, rodapé, banners de outros sites de jogos, redes sociais e anúncios), e o Autodraw perde Share, Artists, About e links externos do menu. `policies.json` bloqueia `/apps` e `/quem-somos` do Colorir.
 - Tile **Kiddo Games** (kiddogames.fun, jogos simples sem anúncios), categoria Passatempo.
 - Tile **Teach Your Monster** (teachyourmonster.org/account/play), categoria Passatempo, com login automático.
+- **Atualizações automáticas** (`beni/sistema/beni-atualizar`, instalado em `/usr/local/sbin` pelo `beni/sistema/instalar-sistema.sh`):
+  - `beni-atualizar-verificar.timer` roda de hora em hora: procura a Release mais nova de `jaison/beni-launcher`, baixa o `.tar.gz` da tag e confere se o `VERSION` bate com a tag.
+  - `beni-atualizar-aplicar.service` roda no boot, antes do `display-manager`: instala como root a parte de sistema e, como o usuário, o `instalar.sh --atualizacao`, que inclui as migrações de catálogo. Antes guarda uma cópia, e volta para ela se algo falhar.
+  - Com o notebook ligado, instala na hora se a Release tiver `[forcar]` nas notas, ou de madrugada; nos dois casos, só quando nenhum app está aberto. O launcher fecha, aparece um aviso pelo zenity e o launcher reabre na sessão.
+  - O estado fica em `/var/lib/beni-launcher/estado.json`, que a área dos pais mostra em Pais → Sistema (`/api/update/status`). O log fica em `/var/log/beni-atualizar.log`.
+- O **atualizador do projeto original** (`update.sh`), que instalaria o Cozy Kids Launcher original por cima deste projeto, é removido pelo `instalar.sh`. A verificação de versão do servidor aponta para este repositório (`legacy_update_status` continua testado).
+- Versão do projeto em `VERSION` (1.0.0), gravada em `~/.local/share/cozy-kids-launcher/version`.
+- `instalar.sh` agora chama `sudo beni/sistema/instalar-sistema.sh` para tudo que é root (pacotes de `pacotes-apt.txt`/`pacotes-flatpak.txt`, políticas do Firefox, DNS, atualizador) e aplica as migrações de `beni/config/migracoes.json` (`beni/ferramentas/migrar-config.py`; as já aplicadas ficam em `~/.config/cozy-kids-launcher/migracoes-aplicadas.json`).
 - Autostart `~/.config/autostart/cozy-kids-launcher-autostart.desktop` → `cozy-iniciar`.
