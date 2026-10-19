@@ -31,14 +31,15 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
 - **Apps melhores**:
   - GCompris e Tux Paint em versões novas (Flathub);
   - Scratch (TurboWarp), Luanti (parecido com Minecraft), Klavaro (digitação), Klotski, Pingus, Hex-a-hop, SuperTux, Frogatto e Stellarium;
-  - sites educativos em português (Khan Academy, PhET, Blockly Games, Escola Games);
+  - sites educativos em português (Khan Academy, PhET com uma tela para escolher a matéria, Blockly Games, Escola Games sem anúncios e sem o menu de jogos de diversão);
   - jogos de vestir/maquiagem/boneca sem anúncios (itch.io).
 - **Super Nintendo e PlayStation**: uma lista de jogos em tela cheia, com capas, que funciona com teclado, mouse ou controle. Usa RetroArch + snes9x e PCSX-Reloaded. Os jogos (ROMs) não vêm incluídos.
 - **Jogos de navegador em tela cheia de verdade**: os jogos do itch.io são ampliados até ocupar a tela, a faixa do Unity com o botão "tela cheia" é escondida e uma tela "Carregando…" cobre a abertura, para não aparecer a área de trabalho piscando.
 
 ### Para os pais
 - **Coleções do itch.io**: cada criança tem uma coleção pública no itch.io. Jogo que você adiciona na coleção vira ícone, com a capa, no perfil da criança, e jogo removido some. A sincronização roda no login e a cada 30 min. Os pais testam o jogo antes e só então distribuem.
-- Em Pais → Tempo de tela → **Limite diário por categoria** você define os minutos, escolhe a categoria de cada app e zera o tempo do dia.
+- Em Pais → Tempo de tela → **Limite diário por categoria** você define os minutos (também diferentes em cada dia da semana, por exemplo mais jogo no fim de semana), escolhe a categoria de cada app e zera o tempo do dia.
+- **Internet com filtro**: o notebook usa o DNS CleanBrowsing Family em qualquer Wi‑Fi. Sites adultos, proxies e VPNs ficam bloqueados, e a Busca Segura do Google e o Modo Restrito do YouTube são obrigatórios.
 - Em Pais → Aparência → **Tela inicial** você liga ou desliga a pergunta Aprender/Jogar em cada perfil.
 - A prévia da aparência mostra o visual dos temas novos e as capas dos jogos.
 

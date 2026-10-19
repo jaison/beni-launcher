@@ -114,6 +114,13 @@ grep -q legacyUserProfileCustomizations "$P/user.js" || \
   echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$P/user.js"
 sudo install -D -m 0644 "$REPO/beni/firefox/policies.json" /etc/firefox/policies/policies.json
 
+passo "DNS com filtro para crianças (CleanBrowsing Family) em qualquer rede"
+# O NetworkManager 1.46 ignora o DNS global quando usa o systemd-resolved; por isso
+# ele para de repassar o DNS do roteador e o resolved usa só o DNS com filtro.
+sudo install -D -m 0644 "$REPO/beni/sistema/dns-familia-resolved.conf" /etc/systemd/resolved.conf.d/dns-familia.conf
+sudo install -D -m 0644 "$REPO/beni/sistema/90-dns-familia.conf" /etc/NetworkManager/conf.d/90-dns-familia.conf
+sudo systemctl restart systemd-resolved NetworkManager || aviso "reinicie o computador para o DNS com filtro valer"
+
 passo "Abrir sozinho no login + sincronizar o itch.io a cada 30 min"
 mkdir -p "$HOME/.config/autostart" "$HOME/.config/systemd/user"
 cat > "$HOME/.config/autostart/cozy-kids-launcher-autostart.desktop" <<EOF

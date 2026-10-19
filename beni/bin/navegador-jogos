@@ -8,7 +8,7 @@ exec flatpak run org.chromium.Chromium \
   --user-data-dir="$HOME/.var/app/org.chromium.Chromium/cozy-jogos" \
   --kiosk --no-first-run --no-default-browser-check --noerrdialogs \
   --disable-session-crashed-bubble --hide-crash-restore-bubble \
-  --disable-translate --disable-features=Translate,TranslateUI --password-store=basic \
+  --disable-translate --disable-features=Translate,TranslateUI,DnsOverHttps --password-store=basic \
   --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy \
   --autoplay-policy=no-user-gesture-required --lang=pt-BR \
   "$1"
