@@ -10,6 +10,24 @@ Cada cartão mostra quanto tempo ainda resta hoje.
 
 ![Tela inicial](beni/prints/01-escolha-beni.png)
 
+### Por que este projeto existe
+
+> Eu sou o **Jaison**. Eu queria dar vida nova a um notebook antigo, de 2011, para o meu
+> sobrinho **Benício** (o Beni), e transformar uma máquina que ia ficar parada num computador
+> que ele pudesse usar sozinho, com segurança.
+>
+> A premissa era simples:
+> - **Teclado e mouse**, como um computador de verdade, e não um tablet. Ele aprende a usar o computador enquanto brinca.
+> - **Programas, sites e jogos escolhidos por mim.** Nada de navegar solto: só o que foi testado e aprovado aparece na tela.
+> - **Segurança na internet**, com um DNS que bloqueia sites inadequados em qualquer rede, além de Busca Segura e YouTube restrito.
+> - **Liga e já funciona.** O notebook entra direto no menu das crianças, sem senha, sem área de trabalho e sem configurar nada.
+> - **Logins automáticos.** Ele não precisa decorar e-mail e senha para entrar no Khan Academy ou no Teach Your Monster.
+> - **Regras de tempo.** Tempo certo para aprender, para passatempos e para jogar. E o tempo de jogo depende de ele ter feito a parte de aprender.
+>
+> No caminho, o projeto ganhou um segundo perfil (a Bea, de 5 anos), temas, emuladores e muitas
+> correções para hardware antigo. Está tudo aqui, para quem quiser fazer o mesmo com um notebook
+> esquecido na gaveta.
+
 ### Os quatro pilares
 
 | | |
