@@ -69,7 +69,7 @@ Cada cartão mostra quanto tempo ainda resta hoje.
 | Khan Academy (login automático) | Desenhar (**Kleki**, desenhos salvos em Imagens/Desenhos) | Luanti (parecido com Minecraft) |
 | **PhET** com tela para escolher a matéria (Física, Matemática, Química, Terra e Espaço, Biologia), já no Ensino Fundamental 1 | **Autodraw** | SuperTux, SuperTuxKart, Frogatto |
 | **Escola Games** sem anúncios e sem o menu de jogos de diversão | **Colorir** (só os desenhos, sem propaganda de outros jogos) | **Super Nintendo e PlayStation** (lista com capas, teclado/mouse/controle) |
-| Scratch (TurboWarp), Blockly Games | **Teach Your Monster** (login automático) | jogos de navegador do **itch.io** em tela cheia de verdade |
+| Scratch (TurboWarp), Blockly Games | **Teach Your Monster** (login automático) e **Kiddo Games** (73 joguinhos sem anúncios) | jogos de navegador do **itch.io** em tela cheia de verdade |
 | Digitação (Klavaro), Planetário (Stellarium) | GCompris, Pingus, Hex-a-hop, Klotski, Music Lab | jogos de vestir/maquiagem/boneca sem anúncios |
 
 Os pais mudam qualquer app de categoria em Pais → Tempo de tela.
@@ -262,7 +262,7 @@ traduzidos e o campo `limitBlocked`.
 - **[Cozy Kids Launcher](https://github.com/TrissyGE/cozy-kids-launcher)** © 2026 Tristan e colaboradores, **licença MIT**. Ela continua valendo para todo o código ([LICENSE](LICENSE)), e as mudanças deste projeto são publicadas sob a mesma licença.
 - Fontes dos temas (Bangers, Bungee, Shojumaru, Fredoka): SIL Open Font License, veja [themes/fonts/LEIA-ME.md](themes/fonts/LEIA-ME.md).
 - uBlock Origin (GPLv3) © Raymond Hill, incluído sem modificações.
-- Os apps, jogos e sites (GCompris, TurboWarp, Luanti, SuperTux, Kleki, Khan Academy, PhET, Escola Games, Teach Your Monster, itch.io…) pertencem aos seus autores e só são baixados ou abertos das fontes oficiais.
+- Os apps, jogos e sites (GCompris, TurboWarp, Luanti, SuperTux, Kleki, Khan Academy, PhET, Escola Games, Teach Your Monster, Kiddo Games, itch.io…) pertencem aos seus autores e só são baixados ou abertos das fontes oficiais.
 - Feito com a ajuda do Claude (Anthropic) via Claude Code.
 
 ## Galeria

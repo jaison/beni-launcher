@@ -74,6 +74,16 @@
           "category": "passatempo"
         },
         {
+          "id": "kiddogames",
+          "label": "Kiddo Games",
+          "emoji": "🐸",
+          "cmd": [
+            "special:external-browser:https://kiddogames.fun/"
+          ],
+          "visible": true,
+          "category": "passatempo"
+        },
+        {
           "id": "games",
           "label": "Jogos educativos",
           "emoji": "🧩",
@@ -582,6 +592,16 @@
           "emoji": "👾",
           "cmd": [
             "special:external-browser:https://www.teachyourmonster.org/account/play"
+          ],
+          "visible": true,
+          "category": "passatempo"
+        },
+        {
+          "id": "kiddogames",
+          "label": "Kiddo Games",
+          "emoji": "🐸",
+          "cmd": [
+            "special:external-browser:https://kiddogames.fun/"
           ],
           "visible": true,
           "category": "passatempo"
