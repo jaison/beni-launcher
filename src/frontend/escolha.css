@@ -95,3 +95,11 @@ body.escolha-ativa #usageMeters { display:none; }
   .escolha-barra-fill { transition:none; }
   .escolha-btn.escolha-balanca { animation:none; }
 }
+
+/* Regra de aprendizado: "Hoje 15 min — ontem faltou aprender 📚" / meta de hoje no Aprender */
+#grid .escolha-btn .escolha-regra {
+  font-size:clamp(.95rem,1.5vw,1.2rem); font-weight:700; line-height:1.2;
+  text-transform:none; letter-spacing:0; text-align:center; max-width:92%;
+  padding:4px 12px; border-radius:999px;
+  background:color-mix(in srgb, #fde047 38%, transparent);
+}

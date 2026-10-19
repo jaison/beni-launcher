@@ -50,6 +50,23 @@ class ConfigValidationTests(unittest.TestCase):
         self.assertEqual(validated["pinHash"], "0123456789abcdef")
         self.assertNotIn("pinConfigured", validated)
 
+    def test_category_limits_learning_rule_is_validated(self):
+        data = base_config()
+        data["categoryLimits"] = {
+            "enabled": True,
+            "totalMinutes": 60,
+            "categories": {"jogos": {"minutes": 30}, "educativo": {"minutes": 30}},
+            "learningRule": {"enabled": True, "reducedPercent": 40},
+        }
+        validated = config_validation.validate_config(data)
+        self.assertEqual(
+            validated["categoryLimits"]["learningRule"],
+            {"enabled": True, "goalPercent": 50, "reducedPercent": 40, "mode": "fixed"},
+        )
+        data["categoryLimits"]["learningRule"] = {"enabled": True, "goalPercent": 150}
+        with self.assertRaisesRegex(ValueError, "goalPercent"):
+            config_validation.validate_config(data)
+
     def test_imported_pin_hash_must_use_a_supported_format(self):
         data = base_config()
         data["pinHash"] = parent_auth.hash_pin("1234", salt="00" * 16)

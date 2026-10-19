@@ -24,6 +24,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
   - Medidores verde/amarelo/vermelho no launcher e o tempo restante ao lado do ❌ durante o jogo.
   - Nos **10 segundos finais** aparece uma contagem grande ("Seu tempo de jogos está acabando! 8…"), com a sugestão do que ainda dá para fazer ("Você ainda pode brincar de Aprender (18 min)").
   - O tempo continua contando certo mesmo depois de reiniciar o notebook e zera à meia-noite.
+  - Se os pais ligarem a **regra de aprendizado**, quem não aprendeu ontem tem menos tempo de Jogar hoje ("Hoje 15 min — ontem faltou aprender 📚").
 - **6 temas novos**, com arte original em SVG (nenhum personagem ou logo de marca):
   - meninos: **Herói Aranha** (quadrinhos), **Blocos de Montar** e **Dojo Ninja**;
   - meninas: **Reino do Gelo**, **Casinha Mágica** e **Castelo Encantado**, com letras grandes e redondas para quem ainda está aprendendo a ler.
@@ -39,6 +40,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
 ### Para os pais
 - **Coleções do itch.io**: cada criança tem uma coleção pública no itch.io. Jogo que você adiciona na coleção vira ícone, com a capa, no perfil da criança, e jogo removido some. A sincronização roda no login e a cada 30 min. Os pais testam o jogo antes e só então distribuem.
 - Em Pais → Tempo de tela → **Limite diário por categoria** você define os minutos (também diferentes em cada dia da semana, por exemplo mais jogo no fim de semana), escolhe a categoria de cada app e zera o tempo do dia.
+- **Regra de aprendizado** (opcional, no mesmo quadro): se ontem a criança não fez a meta de Aprender (padrão: metade do tempo de Aprender), hoje o Jogar (e o Passatempo, que divide o mesmo tempo) fica menor (padrão: metade). Ex.: ontem Aprender 0/30 min → hoje Jogar 15 min em vez de 30. Dá para escolher os dois percentuais e o modo proporcional (quem aprendeu um pouco perde menos). Dia sem uso do notebook não conta, e o total do dia não muda. A criança vê "Hoje 15 min — ontem faltou aprender 📚" no cartão Jogar e, no Aprender, quanto falta para ter o Jogar inteiro amanhã; os pais veem o motivo ("Hoje: Jogar reduzido para 15 min porque ontem Aprender foi 0/30 min").
 - **Login automático no Khan Academy e no Teach Your Monster**: em Pais → Crianças → "🔑 Login automático nos sites" você salva o e-mail e a senha da conta da criança; ao abrir o site, o launcher entra sozinho. Cada criança tem o seu navegador de sites, então os logins não se misturam.
 - **Internet com filtro**: o notebook usa o DNS CleanBrowsing Family em qualquer Wi‑Fi. Sites adultos, proxies e VPNs ficam bloqueados, e a Busca Segura do Google e o Modo Restrito do YouTube são obrigatórios.
 - Em Pais → Aparência → **Tela inicial** você liga ou desliga a pergunta Aprender/Passatempo/Jogar em cada perfil.

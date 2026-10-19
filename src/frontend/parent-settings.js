@@ -132,6 +132,7 @@ function renderAdminSections(){
     document.getElementById('overviewTimerValue').textContent=
       (lim.totalMinutes!==null&&lim.totalMinutes!==undefined?lim.totalMinutes+' min/dia':'Limite diário')+(parts.length?' ('+parts.join(' · ')+')':'');
     if(lim.weekdays&&Object.keys(lim.weekdays).length) document.getElementById('overviewTimerValue').textContent='Limite por dia da semana';
+    if(lim.learningRule&&lim.learningRule.enabled) document.getElementById('overviewTimerValue').textContent+=' · 📚 regra de aprendizado';
   }
   document.getElementById('overviewAppearanceLabel').textContent=uiText.adminAppearance;
   document.getElementById('overviewAppearanceValue').textContent=themeLabel(cfg.theme||'rosa');

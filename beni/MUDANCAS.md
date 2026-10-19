@@ -11,9 +11,9 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 ## Arquivos novos (`src/`)
 | Arquivo | Para quê |
 |---|---|
-| `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. Uma categoria pode dividir o limite de outra (`"pool": "jogos"`): o **Passatempo** gasta dos mesmos minutos dos Jogos. Opcional: limite diferente em cada dia da semana (`categoryLimits.weekdays.{mon..sun}`; campo ausente = usa o padrão, `null` = sem limite). |
-| `frontend/usage-limits.js` / `.css` | Medidores na barra de baixo, mensagens de "tempo acabou" e painel em Pais → Tempo de tela (com a tabela Seg–Dom de "Tempo diferente em cada dia da semana"). |
-| `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Passatempo / Jogar" e lista filtrada por categoria (o Passatempo só aparece se o perfil tiver essa categoria). |
+| `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. Uma categoria pode dividir o limite de outra (`"pool": "jogos"`): o **Passatempo** gasta dos mesmos minutos dos Jogos. Opcional: limite diferente em cada dia da semana (`categoryLimits.weekdays.{mon..sun}`; campo ausente = usa o padrão, `null` = sem limite). Opcional: **regra de aprendizado** (`categoryLimits.learningRule`, ver abaixo); para ela o mesmo arquivo guarda um histórico curto por perfil (`history`, últimos 14 dias, só segundos por categoria; continua `usageVersion: 1`, então uma versão antiga só ignora o campo). |
+| `frontend/usage-limits.js` / `.css` | Medidores na barra de baixo, mensagens de "tempo acabou" e painel em Pais → Tempo de tela (com a tabela Seg–Dom de "Tempo diferente em cada dia da semana" e o quadro da regra de aprendizado com a linha "Hoje: Jogar reduzido para 15 min porque…"). |
+| `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Passatempo / Jogar" e lista filtrada por categoria (o Passatempo só aparece se o perfil tiver essa categoria). Com a regra de aprendizado valendo, Jogar/Passatempo mostram "Hoje 15 min — ontem faltou aprender 📚" e a barrinha começa pela metade; o Aprender mostra quanto falta para a meta de hoje. |
 | `site_logins.py`, `frontend/site-logins.js` / `.css` | Login automático nos sites (Khan Academy e Teach Your Monster, aba "Home" da conta de família) por perfil. Pais → Crianças → "🔑 Login automático nos sites" grava e-mail/usuário e senha em `~/.config/cozy-kids-launcher/site-logins.json` (600, fora do config.json; a senha nunca volta para a página). Ao abrir o Khan, o Firefox sobe com o Marionette (controle remoto do próprio Firefox, porta 28290, só nesse tile) e uma thread preenche o login e clica em Entrar; se já estiver logado, não digita nada. Endpoints `GET`/`POST /api/site-logins` (só pais). |
 | `frontend/cozy-temas.css` | Temas heroi, blocos, ninja, gelo, casinha e castelo; estilos da prévia; capas de jogos nos tiles. |
 | `frontend/locales/pt.json` | Português do Brasil (todas as 237 chaves do inglês). |
@@ -35,16 +35,28 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 | `frontend/launcher-ui.js` | Lista filtrada pela categoria escolhida; clique em tile bloqueado por limite; nomes dos temas novos e em pt. |
 | `frontend/theme-runtime.js` | Registra os 6 temas novos como "mundos ilustrados". |
 | `frontend/runtime-controls.js` | Teclado na tela de escolha; Esc na lista volta para a escolha; Esc com a mensagem de "tempo acabou" aberta só fecha a mensagem (antes saía do modo infantil). |
-| `frontend/parent-settings.js` | Painel dos limites; opção "Tela inicial"; recomendações em pt; botão Desligar aparece já no carregamento. |
+| `frontend/parent-settings.js` | Painel dos limites (o resumo mostra "📚 regra de aprendizado" quando ligada); opção "Tela inicial"; recomendações em pt; botão Desligar aparece já no carregamento. |
 | `frontend/schedule-controls.js` | Repassa os motivos de bloqueio por limite; não mostra `img:…` cru no seletor. |
 | `frontend/state.js`, `localization.js`, `profiles.js`, `first-run.js`, `activity-dashboard.js`, `media-library.js` | Suporte ao idioma `pt` (textos de perfis, datas pt-BR, opção 🇧🇷 no primeiro uso). |
 | `index.html` | Textos em pt; links dos CSS/JS novos; botão Voltar e selo de tempo; quadros "Limite diário por categoria" e "Tela inicial". |
+
+## Regra de aprendizado (`categoryLimits.learningRule`)
+`{"enabled": true, "goalPercent": 50, "reducedPercent": 50, "mode": "fixed"}` (campos que faltarem usam esses valores; `goalPercent` 1–100, `reducedPercent` 0–100, `mode` `fixed` ou `proportional`).
+- Se **ontem** a criança fez menos que `goalPercent`% do limite de 📚 Aprender (`educativo`) de ontem, **hoje** o limite de 🎮 Jogos (`jogos`) fica com `reducedPercent`% (arredondado para baixo). Ex.: ontem Aprender 0/30 → hoje Jogos 15 em vez de 30. O 🎨 Passatempo divide o pool dos Jogos e cai junto.
+- `proportional`: o Jogar fica entre `reducedPercent`% e 100% conforme o quanto da meta foi feito (metade da meta com 50% → 75%).
+- Sem penalidade quando: ontem o perfil não usou o notebook (nenhum segundo contado — também vale para o notebook desligado); Aprender não tinha limite ontem (não há meta; limite 0 = meta 0, sempre cumprida); Jogos está sem limite hoje; a regra ou os limites do perfil estão desligados (comportamento igual ao de antes).
+- Dia da semana: a meta usa o limite de Aprender **de ontem** (coluna de ontem) e a redução vale sobre o limite de Jogos **de hoje** (coluna de hoje). As duas contas usam o config atual.
+- O **total do dia não muda**: reduzir o total tiraria tempo também do Aprender, o contrário do que a regra quer. O Jogar menor já reduz o que dá para usar.
+- Só conta o dia imediatamente anterior (não "o último dia usado"): depois de um fim de semana sem notebook, segunda começa sem redução.
+- "Zerar o tempo de hoje" não mexe no histórico.
+- `/api/usage/status` ganha `learningRule: {enabled, active, reason, mode, goalPercent, reducedPercent, percent, category, learningCategory, yesterday, yesterdayUsedSeconds, yesterdayLearnedSeconds, yesterdayLearningMinutes, goalSeconds, baseMinutes, minutes, today: {goalSeconds, learnedSeconds, met}}`; `reason` ∈ `off`, `no_goal`, `no_usage`, `goal_met`, `no_play_limit`, `goal_missed`. As categorias reduzidas trazem `learningReduced: true` e `baseMinutes`.
 
 ## `scripts/` e `tests/`
 - `scripts/install.sh`: também copia `usage_limits.py`, `site_logins.py`, `sites/phet.html`, `pt.json` e os CSS/JS novos.
 - `tests/test_server.py`: 2 asserções ajustadas (texto já traduzido; campo `limitBlocked`).
 - `tests/test_site_logins.py` (novo): login dos sites e perfis do Firefox por criança.
-- `tests/test_usage_limits.py` (novo): limites por dia da semana.
+- `tests/test_usage_limits.py` (novo): limites por dia da semana, pool e regra de aprendizado (regra desligada, meta cumprida/não cumprida, dia anterior sem uso, Aprender sem limite, Jogar sem limite, pool, dia da semana, modo proporcional, histórico na virada do dia e após reiniciar, arquivo antigo sem histórico, fechamento do app no limite reduzido).
+- `tests/test_config_validation.py`: validação de `categoryLimits.learningRule`.
 - `tests/test_overlay.py` passa sem mudança. O `overlay.py` só pede `XMoveWindow` ao X11 quando vai usar.
 
 ## Fora do launcher (`beni/`)

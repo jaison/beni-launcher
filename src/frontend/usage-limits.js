@@ -43,6 +43,46 @@ function usageAlternativesText(excludeId){
   return 'Você ainda pode brincar de '+options.map(c=>c.label+' '+c.emoji+(c.availableSeconds!==null?' ('+usageMinutes(c.availableSeconds)+' min)':'')).join(' ou ')+'.';
 }
 
+// ---------- Regra de aprendizado (ontem Aprender < meta → hoje Jogar menor) ----------
+function usageLearningRule(){
+  const r=usageStatus&&usageStatus.enabled&&usageStatus.learningRule;
+  return r&&r.enabled?r:null;
+}
+// Regra valendo hoje para esta categoria (Jogos e quem divide o pool, ex.: Passatempo)
+function usageLearningReducedFor(categoryId){
+  const r=usageLearningRule(), cat=usageCategory(categoryId);
+  return r&&r.active&&cat&&cat.learningReduced?r:null;
+}
+function usageLearningKidText(r){ return 'Hoje '+r.minutes+' min — ontem faltou aprender 📚'; }
+// Dica no cartão Aprender: quanto falta hoje para Jogar ficar inteiro amanhã
+function usageLearningGoalKidText(){
+  const r=usageLearningRule();
+  const t=r&&r.today;
+  if(!t||t.goalSeconds===null||t.goalSeconds===undefined||t.goalSeconds<=0) return '';
+  if(t.met) return 'Meta de hoje cumprida! ⭐';
+  return 'Aprenda '+usageMinutes(t.goalSeconds-t.learnedSeconds)+' min e amanhã tem Jogar inteiro ⭐';
+}
+function usageLearningParentText(){
+  const r=usageLearningRule();
+  if(!r) return '';
+  const learned=usageUsedMinutes(r.yesterdayLearnedSeconds);
+  const goalMin=r.goalSeconds===null||r.goalSeconds===undefined?null:Math.round(r.goalSeconds/60);
+  const learnText='ontem 📚 Aprender foi '+learned+(r.yesterdayLearningMinutes!==null&&r.yesterdayLearningMinutes!==undefined?'/'+r.yesterdayLearningMinutes:'')+' min'+(goalMin!==null?' (meta '+goalMin+' min)':'');
+  let text;
+  if(r.reason==='goal_missed'&&r.active) text='Hoje: 🎮 Jogar reduzido para '+r.minutes+' min (de '+r.baseMinutes+') porque '+learnText+'.';
+  else if(r.reason==='goal_missed') text='Hoje sem redução: a meta não foi cumprida, mas a redução configurada é de 100%.';
+  else if(r.reason==='goal_met') text='Hoje sem redução: '+learnText+' ✔';
+  else if(r.reason==='no_usage') text='Hoje sem redução: ontem este perfil não usou o notebook.';
+  else if(r.reason==='no_goal') text='Hoje sem redução: 📚 Aprender estava sem limite ontem, então não havia meta.';
+  else if(r.reason==='no_play_limit') text='Hoje sem redução: 🎮 Jogar está sem limite hoje.';
+  else text='Hoje sem redução.';
+  const t=r.today||{};
+  if(t.goalSeconds!==null&&t.goalSeconds!==undefined&&t.goalSeconds>0){
+    text+=' Para amanhã: '+usageUsedMinutes(t.learnedSeconds)+'/'+Math.round(t.goalSeconds/60)+' min de Aprender'+(t.met?' ✔':'')+'.';
+  }
+  return text;
+}
+
 // ---------- Medidores na tela da criança ----------
 function renderUsageMeters(){
   const host=document.getElementById('usageMeters');
@@ -53,7 +93,9 @@ function renderUsageMeters(){
   const groups=usageGroups();
   for(const g of groups){
     if(g.minutes===null||g.minutes===undefined) continue;
-    items.push({emoji:g.emoji,label:g.label,used:g.used,limit:g.minutes*60,available:g.available,exhausted:g.exhausted});
+    const reduced=g.members.some(c=>usageLearningReducedFor(c.id));
+    items.push({emoji:g.emoji,label:g.label,used:g.used,limit:g.minutes*60,available:g.available,exhausted:g.exhausted,
+      note:reduced?'ontem faltou aprender 📚':'',noteLong:reduced?usageLearningKidText(usageLearningRule()):''});
   }
   const sum=groups.reduce((acc,g)=>acc+(g.minutes===null||g.minutes===undefined?Infinity:g.minutes),0);
   if(usageStatus.totalMinutes!==null&&usageStatus.totalMinutes!==undefined&&(usageStatus.totalMinutes<sum||!items.length)){
@@ -67,7 +109,8 @@ function renderUsageMeters(){
     const usedMin=Math.min(usageUsedMinutes(item.used),item.limit/60);
     const limitMin=Math.round(item.limit/60);
     pill.setAttribute('role','img');
-    pill.setAttribute('aria-label',item.label+': '+usedMin+' de '+limitMin+' minutos usados');
+    pill.setAttribute('aria-label',item.label+': '+usedMin+' de '+limitMin+' minutos usados'+(item.noteLong?'. '+item.noteLong:''));
+    if(item.noteLong) pill.title=item.noteLong;
     const emoji=document.createElement('span');
     emoji.className='usage-emoji';
     emoji.textContent=item.exhausted?'🔒':item.emoji;
@@ -84,6 +127,12 @@ function renderUsageMeters(){
     fill.style.width=Math.round((item.exhausted?1:fraction)*100)+'%';
     bar.appendChild(fill);
     text.append(name,bar);
+    if(item.note){
+      const note=document.createElement('span');
+      note.className='usage-note';
+      note.textContent=item.note;
+      text.appendChild(note);
+    }
     const count=document.createElement('span');
     count.className='usage-count';
     count.textContent=item.exhausted?'acabou':usedMin+'/'+limitMin+' min';
@@ -138,7 +187,11 @@ function usageLimitTexts(reason,categoryId){
     return ['O tempo de hoje acabou!','Que tal brincar longe da tela? Amanhã tem mais! 😊'];
   }
   const other=usageAlternativesText(categoryId);
-  return ['O tempo de '+cat.label+' acabou por hoje!', other||'Amanhã tem mais! 😊'];
+  // Regra de aprendizado ligada: lembrete positivo de que Aprender hoje dá mais Jogar amanhã
+  const r=usageLearningRule();
+  const learnTip=r&&cat.pool===r.category&&r.today&&!r.today.met&&r.today.goalSeconds>0
+    ? ' Aprendendo um pouquinho hoje, amanhã tem mais tempo de jogar! 📚' : '';
+  return ['O tempo de '+cat.label+' acabou por hoje!', (other||'Amanhã tem mais! 😊')+learnTip];
 }
 function maybeShowUsageExpiry(){
   const expiry=usageStatus&&usageStatus.lastExpiry;
@@ -323,6 +376,7 @@ function renderUsageLimitSettings(){
   dayToggle.append(dayCheck,document.createTextNode(' 📅 Tempo diferente em cada dia da semana'));
   fields.appendChild(dayToggle);
   if(byDay) fields.appendChild(usageWeekdayTable(limits));
+  fields.appendChild(learningRuleSettings(limits));
   const hint=document.createElement('p');
   hint.className='muted';
   hint.textContent='O tempo só conta enquanto um app ou site da categoria está aberto e zera à meia-noite. Campo vazio = sem limite. Clique em Salvar para aplicar.'+(byDay?' Cada dia usa a sua coluna.':'');
@@ -362,7 +416,82 @@ function renderUsageLimitSettings(){
   document.getElementById('usageTileCategoriesWrap').hidden=!limits.enabled;
   renderUsageLimitSettingsStatus();
 }
+// Regra de aprendizado: meta de Aprender e quanto sobra de Jogar no dia seguinte
+const LEARNING_RULE_DEFAULTS={enabled:false,goalPercent:50,reducedPercent:50,mode:'fixed'};
+function percentInput(value,min,label,onchange){
+  const input=document.createElement('input');
+  input.type='number'; input.min=String(min); input.max='100'; input.step='5';
+  input.value=String(value);
+  input.setAttribute('aria-label',label);
+  input.onchange=()=>{
+    const parsed=parseInt(input.value,10);
+    const clean=Number.isFinite(parsed)?Math.max(min,Math.min(100,parsed)):value;
+    input.value=String(clean);
+    onchange(clean);
+  };
+  return input;
+}
+function learningRuleSettings(limits){
+  const rule=Object.assign({},LEARNING_RULE_DEFAULTS,limits.learningRule||{});
+  const box=document.createElement('div');
+  box.className='usage-learning-rule';
+  const toggle=document.createElement('label');
+  toggle.className='chk usage-learning-toggle';
+  const check=document.createElement('input');
+  check.type='checkbox'; check.checked=!!rule.enabled;
+  check.onchange=()=>{ limits.learningRule=Object.assign(rule,{enabled:check.checked}); renderUsageLimitSettings(); };
+  toggle.append(check,document.createTextNode(' 📚 Regra de aprendizado: se não aprender, 🎮 Jogar no dia seguinte fica menor'));
+  box.appendChild(toggle);
+  if(!rule.enabled) return box;
+  limits.learningRule=rule;
+  const row=(labelText,input,unitText)=>{
+    const el=document.createElement('label');
+    el.className='usage-limit-row usage-learning-row';
+    const span=document.createElement('span'); span.textContent=labelText;
+    const unit=document.createElement('span'); unit.className='muted'; unit.textContent=unitText;
+    el.append(span,input,unit);
+    box.appendChild(el);
+  };
+  const example=document.createElement('p');
+  example.className='muted';
+  const updateExample=()=>{
+    const learn=(limits.categories.educativo||{}).minutes, play=(limits.categories.jogos||{}).minutes;
+    if(learn===null||learn===undefined||play===null||play===undefined){
+      example.textContent='A regra precisa de limite em 📚 Aprender (para ter meta) e em 🎮 Jogos (para reduzir).';
+      return;
+    }
+    const goal=Math.floor(learn*rule.goalPercent/100), reduced=Math.floor(play*rule.reducedPercent/100);
+    example.textContent='Ex.: com Aprender '+learn+' min e Jogar '+play+' min, a meta é '+goal+' min de Aprender. '
+      +'Se ontem ficou abaixo disso, hoje Jogar fica com '+(rule.mode==='proportional'?'entre '+reduced+' e '+play:reduced)+' min. '
+      +'Dias em que o notebook não foi usado não contam. Quem divide o tempo do Jogar (ex.: 🎨 Passatempo) também diminui; o total do dia e o Aprender não mudam. '
+      +'Com tempo diferente em cada dia da semana, vale a coluna de ontem (meta) e a de hoje (Jogar).';
+  };
+  row('Meta de Aprender',percentInput(rule.goalPercent,1,'Meta de Aprender em % do tempo de Aprender',v=>{ rule.goalPercent=v; updateExample(); }),'% do tempo de Aprender');
+  row('Se não cumprir, Jogar no dia seguinte fica com',percentInput(rule.reducedPercent,0,'Jogar no dia seguinte em %',v=>{ rule.reducedPercent=v; updateExample(); }),'% do tempo de Jogar');
+  const prop=document.createElement('label');
+  prop.className='chk usage-learning-toggle';
+  const propCheck=document.createElement('input');
+  propCheck.type='checkbox'; propCheck.checked=rule.mode==='proportional';
+  propCheck.onchange=()=>{ rule.mode=propCheck.checked?'proportional':'fixed'; updateExample(); };
+  prop.append(propCheck,document.createTextNode(' Proporcional: quem aprendeu um pouco perde menos tempo de Jogar'));
+  box.appendChild(prop);
+  updateExample();
+  box.appendChild(example);
+  const status=document.createElement('p');
+  status.id='learningRuleStatus';
+  status.className='usage-learning-status';
+  status.setAttribute('aria-live','polite');
+  box.appendChild(status);
+  return box;
+}
+function renderLearningRuleStatus(){
+  const target=document.getElementById('learningRuleStatus');
+  if(!target) return;
+  const saved=usageStatus&&usageStatus.learningRule&&usageStatus.learningRule.enabled;
+  target.textContent=saved?usageLearningParentText():'Clique em Salvar para ativar a regra neste perfil.';
+}
 function renderUsageLimitSettingsStatus(){
+  renderLearningRuleStatus();
   const target=document.getElementById('usageTodayStatus');
   if(!target) return;
   if(!usageStatus||!usageStatus.enabled){ target.textContent='Limites desativados (ou ainda não salvos) para este perfil.'; return; }

@@ -57,3 +57,16 @@ body.theme-ninja .usage-pill.usage-low .usage-count, body.theme-ninja .usage-pil
 .usage-weekday-table th.usage-weekend-col { color:#d97706; }
 .usage-weekday-table td input { width:76px; }
 .usage-weekday-table .usage-today-col { background:color-mix(in srgb, #fde047 35%, transparent); border-radius:8px; }
+
+/* Regra de aprendizado */
+.usage-pill .usage-note { font-size:.78rem; font-weight:700; line-height:1; opacity:.9; }
+@media (max-width: 900px) { .usage-pill .usage-note { display:none; } }
+.usage-learning-rule {
+  display:grid; gap:var(--space-2,8px); margin-top:var(--space-3,12px);
+  padding:var(--space-3,12px); border-radius:12px;
+  background:color-mix(in srgb, #fde047 16%, transparent);
+}
+.usage-learning-toggle { font-weight:700; }
+.usage-learning-rule .usage-limit-row { grid-template-columns:minmax(140px,320px) 90px auto; }
+.usage-learning-rule p { margin:0; }
+.usage-learning-status { font-weight:800; }

@@ -58,7 +58,19 @@ function escolhaTempo(id){
   const esgotada=!!(cat.exhausted||usageStatus.totalExhausted);
   if(cat.availableSeconds===null||cat.availableSeconds===undefined) return {...vazio,esgotada};
   const limite=cat.minutes===null||cat.minutes===undefined?totalLimite:cat.minutes*60;
-  return {comTempo:true,esgotada,restante:cat.availableSeconds,limite:limite||cat.availableSeconds||1};
+  // Regra de aprendizado valendo: a barra é medida pelo tempo normal (não enche toda)
+  const regra=typeof usageLearningReducedFor==='function'?usageLearningReducedFor(id):null;
+  const escala=regra&&regra.baseMinutes?regra.baseMinutes*60:null;
+  return {comTempo:true,esgotada,restante:cat.availableSeconds,limite:limite||cat.availableSeconds||1,escala};
+}
+// Linha extra do cartão: "Hoje 15 min — ontem faltou aprender 📚" (Jogar/Passatempo)
+// ou a meta de hoje no Aprender. Vazio quando a regra está desligada.
+function escolhaTextoRegra(id){
+  if(typeof usageLearningRule!=='function') return '';
+  const regra=usageLearningReducedFor(id);
+  if(regra) return usageLearningKidText(regra);
+  if(id==='educativo') return usageLearningGoalKidText();
+  return '';
 }
 function escolhaTextoTempo(t){
   if(t.esgotada) return 'Amanhã tem mais!';
@@ -71,7 +83,7 @@ function escolhaBarra(t){
   barra.className='escolha-barra';
   const fill=document.createElement('span');
   fill.className='escolha-barra-fill escolha-'+(t.esgotada?'out':usageBand(t.restante,t.limite));
-  const fracao=t.esgotada?0:Math.max(0,Math.min(1,(t.restante||0)/(t.limite||1)));
+  const fracao=t.esgotada?0:Math.max(0,Math.min(1,(t.restante||0)/(t.escala||t.limite||1)));
   fill.style.width=Math.round(fracao*100)+'%';
   barra.appendChild(fill);
   return barra;
@@ -110,7 +122,8 @@ function escolhaBotao(opcao,indice){
   btn.dataset.escolha=opcao.id;
   btn.style.position='relative';
   const textoTempo=escolhaTextoTempo(t);
-  btn.setAttribute('aria-label',opcao.titulo+(textoTempo?', '+textoTempo:''));
+  const textoRegra=escolhaTextoRegra(opcao.id);
+  btn.setAttribute('aria-label',opcao.titulo+(textoTempo?', '+textoTempo:'')+(textoRegra?'. '+textoRegra:''));
   if(t.esgotada) btn.setAttribute('aria-disabled','true');
   const emoji=document.createElement('span');
   emoji.className='escolha-emoji';
@@ -134,6 +147,12 @@ function escolhaBotao(opcao,indice){
     txt.textContent=textoTempo;
     tempo.appendChild(txt);
     btn.appendChild(tempo);
+  }
+  if(textoRegra){
+    const regra=document.createElement('span');
+    regra.className='escolha-regra';
+    regra.textContent=textoRegra;
+    btn.appendChild(regra);
   }
   btn.onfocus=()=>{ focusedTileIndex=indice; updateTileFocus(false); };
   btn.onclick=event=>{
@@ -202,11 +221,13 @@ function escolhaAtualizarBarra(){
     txt.textContent=t.esgotada?'acabou':texto;
     chip.appendChild(txt);
   }
-  chip.setAttribute('aria-label',opcao.lista+(texto?', '+texto:''));
+  const regra=escolhaTextoRegra(escolhaModo);
+  chip.setAttribute('aria-label',opcao.lista+(texto?', '+texto:'')+(regra?'. '+regra:''));
+  chip.title=regra;
 }
 
 function escolhaCalcularAssinatura(){
-  const partes=escolhaOpcoes().map(o=>{ const t=escolhaTempo(o.id); return [o.id,t.comTempo,t.esgotada,t.comTempo?usageMinutes(t.restante):'',t.limite].join(':'); });
+  const partes=escolhaOpcoes().map(o=>{ const t=escolhaTempo(o.id); return [o.id,t.comTempo,t.esgotada,t.comTempo?usageMinutes(t.restante):'',t.limite,t.escala,escolhaTextoRegra(o.id)].join(':'); });
   const mapa=typeof usageStatus!=='undefined'&&usageStatus&&usageStatus.tileCategories;
   partes.push(mapa?JSON.stringify(mapa):'');
   return partes.join('|');

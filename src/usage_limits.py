@@ -6,7 +6,10 @@ por exemplo, gasta dos mesmos 30 min dos Jogos.
 O tempo só conta enquanto um app/site lançado pelo launcher está aberto.
 O uso acumula por dia (data local; zera à meia-noite) e por perfil, e fica
 persistido em ~/.local/state/cozy-kids-launcher/usage-today.json para
-sobreviver a reinícios do servidor.
+sobreviver a reinícios do servidor. O mesmo arquivo guarda um histórico curto
+("history": segundos por categoria dos últimos HISTORY_DAYS dias), usado pela
+regra de aprendizado: se ontem a criança não cumpriu a meta de Aprender, hoje
+o limite de Jogar fica reduzido (ver learning_rule_status).
 """
 
 import copy
@@ -16,10 +19,13 @@ import re
 import tempfile
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
+# O histórico é um campo extra opcional: continua na versão 1, e uma versão
+# antiga do launcher simplesmente o ignora.
 USAGE_VERSION = 1
+HISTORY_DAYS = 14
 CATEGORY_ID_PATTERN = re.compile(r"[a-z0-9_-]{1,32}")
 MAX_CATEGORIES = 12
 MAX_LIMIT_MINUTES = 24 * 60
@@ -161,11 +167,45 @@ def limits_for_day(limits, day):
     return result
 
 
-def validate_category_limits(value, field="categoryLimits"):
-    """Normaliza {enabled,totalMinutes,categories:{id:{minutes,label?,emoji?}},weekdays?}."""
+# Regra de aprendizado: a categoria que é a "meta" e o pool que é reduzido.
+LEARNING_CATEGORY = "educativo"
+PLAY_POOL = "jogos"
+LEARNING_RULE_DEFAULTS = {
+    "enabled": False,
+    "goalPercent": 50,
+    "reducedPercent": 50,
+    "mode": "fixed",
+}
+LEARNING_RULE_MODES = ("fixed", "proportional")
+
+
+def _percent(value, field, minimum):
+    if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= 100:
+        raise ValueError(f"{field} must be an integer between {minimum} and 100")
+    return value
+
+
+def validate_learning_rule(value, field="categoryLimits.learningRule"):
+    """Normaliza {enabled, goalPercent 1-100, reducedPercent 0-100, mode fixed|proportional}."""
     if not isinstance(value, dict):
         raise ValueError(f"{field} must be an object")
-    unknown = set(value).difference(("enabled", "totalMinutes", "categories", "weekdays"))
+    if set(value).difference(LEARNING_RULE_DEFAULTS):
+        raise ValueError(f"{field} contains unsupported fields")
+    rule = {**LEARNING_RULE_DEFAULTS, **value}
+    if not isinstance(rule["enabled"], bool):
+        raise ValueError(f"{field}.enabled must be a boolean")
+    rule["goalPercent"] = _percent(rule["goalPercent"], f"{field}.goalPercent", 1)
+    rule["reducedPercent"] = _percent(rule["reducedPercent"], f"{field}.reducedPercent", 0)
+    if rule["mode"] not in LEARNING_RULE_MODES:
+        raise ValueError(f"{field}.mode must be fixed or proportional")
+    return rule
+
+
+def validate_category_limits(value, field="categoryLimits"):
+    """Normaliza {enabled,totalMinutes,categories:{id:{minutes,label?,emoji?}},weekdays?,learningRule?}."""
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be an object")
+    unknown = set(value).difference(("enabled", "totalMinutes", "categories", "weekdays", "learningRule"))
     if unknown:
         raise ValueError(f"{field} contains unsupported fields")
     enabled = value.get("enabled", False)
@@ -207,6 +247,8 @@ def validate_category_limits(value, field="categoryLimits"):
     result = {"enabled": enabled, "totalMinutes": total, "categories": clean}
     if value.get("weekdays"):
         result["weekdays"] = _validate_weekdays(value["weekdays"], clean, f"{field}.weekdays")
+    if "learningRule" in value:
+        result["learningRule"] = validate_learning_rule(value["learningRule"], f"{field}.learningRule")
     return result
 
 
@@ -217,8 +259,61 @@ def today_key(now=None):
     return moment.strftime("%Y-%m-%d")
 
 
-def _empty_usage(day):
-    return {"usageVersion": USAGE_VERSION, "date": day, "profiles": {}}
+def _empty_usage(day, history=None):
+    return {"usageVersion": USAGE_VERSION, "date": day, "profiles": {}, "history": history or {}}
+
+
+def previous_day_key(now=None):
+    moment = datetime.fromtimestamp(time.time() if now is None else now).astimezone()
+    return (moment.date() - timedelta(days=1)).isoformat()
+
+
+def _clean_entry(entry):
+    """{totalSeconds, categories:{id: s}} saneado, ou None se inválido."""
+    if not isinstance(entry, dict):
+        return None
+    total = entry.get("totalSeconds", 0)
+    cats = entry.get("categories", {})
+    if isinstance(total, bool) or not isinstance(total, (int, float)) or not isinstance(cats, dict):
+        return None
+    return {
+        "totalSeconds": max(0.0, float(total)),
+        "categories": {
+            str(k): max(0.0, float(v))
+            for k, v in cats.items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)
+        },
+    }
+
+
+def _valid_day(value):
+    try:
+        return isinstance(value, str) and datetime.strptime(value, "%Y-%m-%d").strftime("%Y-%m-%d") == value
+    except ValueError:
+        return False
+
+
+def _prune_history(history, today):
+    """Mantém só os últimos HISTORY_DAYS dias antes de hoje; descarta vazios."""
+    oldest = (datetime.strptime(today, "%Y-%m-%d").date() - timedelta(days=HISTORY_DAYS)).isoformat()
+    clean = {}
+    for profile_id, days in history.items():
+        kept = {day: entry for day, entry in days.items() if oldest <= day < today}
+        if kept:
+            clean[profile_id] = dict(sorted(kept.items()))
+    return clean
+
+
+def archive_day(history, day, profiles, today):
+    """Move o uso de `day` (dict profile_id -> entrada) para o histórico."""
+    if _valid_day(day) and day < today:
+        for profile_id, entry in profiles.items():
+            if entry.get("totalSeconds", 0) > 0:
+                history.setdefault(profile_id, {})[day] = {
+                    "totalSeconds": round(entry["totalSeconds"], 1),
+                    "categories": {k: round(v, 1) for k, v in entry.get("categories", {}).items()},
+                }
+    return _prune_history(history, today)
 
 
 def load_usage(path, now=None):
@@ -231,27 +326,29 @@ def load_usage(path, now=None):
     if (
         not isinstance(data, dict)
         or data.get("usageVersion") != USAGE_VERSION
-        or data.get("date") != day
         or not isinstance(data.get("profiles"), dict)
     ):
         return _empty_usage(day)
     profiles = {}
     for profile_id, entry in data["profiles"].items():
-        if not isinstance(profile_id, str) or not isinstance(entry, dict):
-            continue
-        total = entry.get("totalSeconds", 0)
-        cats = entry.get("categories", {})
-        if not isinstance(total, (int, float)) or not isinstance(cats, dict):
-            continue
-        profiles[profile_id] = {
-            "totalSeconds": max(0.0, float(total)),
-            "categories": {
-                str(k): max(0.0, float(v))
-                for k, v in cats.items()
-                if isinstance(v, (int, float)) and not isinstance(v, bool)
-            },
-        }
-    return {"usageVersion": USAGE_VERSION, "date": day, "profiles": profiles}
+        clean = _clean_entry(entry) if isinstance(profile_id, str) else None
+        if clean is not None:
+            profiles[profile_id] = clean
+    history = {}
+    raw_history = data.get("history")
+    if isinstance(raw_history, dict):
+        for profile_id, days in raw_history.items():
+            if not isinstance(profile_id, str) or not isinstance(days, dict):
+                continue
+            for history_day, entry in days.items():
+                clean = _clean_entry(entry) if _valid_day(history_day) else None
+                if clean is not None:
+                    history.setdefault(profile_id, {})[history_day] = clean
+    if data.get("date") != day:
+        # Arquivo de outro dia (servidor parado na meia-noite): vira histórico.
+        return _empty_usage(day, archive_day(history, data.get("date"), profiles, day))
+    return {"usageVersion": USAGE_VERSION, "date": day, "profiles": profiles,
+            "history": _prune_history(history, day)}
 
 
 def save_usage(path, data):
@@ -321,13 +418,100 @@ def _remaining(limit_minutes, used_seconds):
     return int(limit_minutes * 60 - used_seconds)
 
 
-def compute_status(profile, usage_entry, active=None, now=None):
-    """Retorna o payload público de uso para um perfil (limites do dia de hoje)."""
+def _goal_seconds(limits, goal_percent):
+    """Meta de Aprender (s) com os limites de um dia; None = Aprender sem limite."""
+    minutes = ((limits.get("categories") or {}).get(LEARNING_CATEGORY) or {}).get("minutes")
+    if minutes is None:
+        return None
+    return int(minutes * 60 * goal_percent / 100)
+
+
+def apply_learning_rule(base_limits, history=None, today_usage=None, now=None):
+    """Limites de hoje (com override do dia da semana) e a regra de aprendizado.
+
+    Se ontem a criança usou o notebook mas fez menos de goalPercent% do limite
+    de Aprender de ontem, o limite do pool "jogos" de hoje (já com o override
+    do dia) cai para reducedPercent% (modo "fixed") ou para um valor entre
+    reducedPercent% e 100% proporcional ao que aprendeu ("proportional").
+    O total do dia não muda. Retorna (limites, info para o payload).
+    """
+    base_limits = base_limits or {}
+    limits = limits_for_day(base_limits, weekday_key(now))
+    rule = base_limits.get("learningRule") or {}
+    rule = {**LEARNING_RULE_DEFAULTS, **rule}
+    categories = limits.get("categories") or {}
+    # "jogos" precisa ser dono do próprio limite (Passatempo divide com ele)
+    play_entry = categories.get(PLAY_POOL) or {}
+    base_minutes = None if play_entry.get("pool") else play_entry.get("minutes")
+    yesterday = previous_day_key(now)
+    yesterday_entry = (history or {}).get(yesterday) or {}
+    yesterday_cats = yesterday_entry.get("categories") or {}
+    # Meta de ontem: config atual com o override do dia da semana de ontem.
+    yesterday_limits = limits_for_day(base_limits, WEEKDAYS[datetime.strptime(yesterday, "%Y-%m-%d").weekday()])
+    learned = pooled_seconds(yesterday_limits, yesterday_cats, LEARNING_CATEGORY)
+    goal = _goal_seconds(yesterday_limits, rule["goalPercent"])
+    today_goal = _goal_seconds(limits, rule["goalPercent"])
+    today_learned = pooled_seconds(limits, (today_usage or {}).get("categories") or {}, LEARNING_CATEGORY)
+    enabled = bool(limits.get("enabled")) and bool(rule["enabled"])
+    info = {
+        "enabled": enabled,
+        "active": False,
+        "reason": "off",
+        "mode": rule["mode"],
+        "goalPercent": rule["goalPercent"],
+        "reducedPercent": rule["reducedPercent"],
+        "percent": 100,
+        "category": PLAY_POOL,
+        "learningCategory": LEARNING_CATEGORY,
+        "yesterday": yesterday,
+        "yesterdayUsedSeconds": int(yesterday_entry.get("totalSeconds", 0) or 0),
+        "yesterdayLearnedSeconds": int(learned),
+        "goalSeconds": goal,
+        # limite de Aprender de ontem (para o texto "ontem Aprender foi 0/30 min")
+        "yesterdayLearningMinutes": (
+            (yesterday_limits.get("categories") or {}).get(LEARNING_CATEGORY) or {}
+        ).get("minutes"),
+        "baseMinutes": base_minutes,
+        "minutes": base_minutes,
+        "today": {
+            "goalSeconds": today_goal,
+            "learnedSeconds": int(today_learned),
+            "met": today_goal is not None and today_learned >= today_goal - 1,
+        },
+    }
+    if not enabled:
+        return limits, info
+    if goal is None:
+        info["reason"] = "no_goal"  # Aprender sem limite ontem: não há meta
+    elif info["yesterdayUsedSeconds"] <= 0:
+        info["reason"] = "no_usage"  # notebook desligado / criança não usou
+    elif learned >= goal - 1:
+        info["reason"] = "goal_met"
+    elif base_minutes is None:
+        info["reason"] = "no_play_limit"  # Jogar sem limite hoje: nada a reduzir
+    else:
+        percent = rule["reducedPercent"]
+        if rule["mode"] == "proportional" and goal > 0:
+            percent = int(percent + (100 - percent) * min(1.0, learned / goal))
+        reduced = int(base_minutes * percent / 100)
+        info.update({"reason": "goal_missed", "percent": percent, "minutes": reduced,
+                     "active": reduced < base_minutes})
+        if reduced < base_minutes:
+            limits = copy.deepcopy(limits)
+            limits["categories"][PLAY_POOL]["minutes"] = reduced
+    return limits, info
+
+
+def compute_status(profile, usage_entry, active=None, now=None, history=None):
+    """Retorna o payload público de uso para um perfil (limites do dia de hoje).
+
+    history: {"AAAA-MM-DD": entrada de uso} do perfil, para a regra de aprendizado.
+    """
     day = weekday_key(now)
     base_limits = profile.get("categoryLimits") or {}
-    limits = limits_for_day(base_limits, day)
-    enabled = bool(limits.get("enabled"))
     usage_entry = usage_entry or {"totalSeconds": 0.0, "categories": {}}
+    limits, learning = apply_learning_rule(base_limits, history, usage_entry, now)
+    enabled = bool(limits.get("enabled"))
     used_total = usage_entry.get("totalSeconds", 0.0)
     total_limit = limits.get("totalMinutes") if enabled else None
     total_remaining = _remaining(total_limit, used_total)
@@ -345,6 +529,9 @@ def compute_status(profile, usage_entry, active=None, now=None):
         exhausted = enabled and effective is not None and effective <= 0
         if exhausted:
             exhausted_ids.add(definition["id"])
+        if learning["active"] and definition["pool"] == PLAY_POOL:
+            definition["baseMinutes"] = learning["baseMinutes"]
+            definition["learningReduced"] = True
         categories.append({
             **definition,
             "usedSeconds": int(used),
@@ -426,6 +613,7 @@ def compute_status(profile, usage_entry, active=None, now=None):
             if tile.get("id")
         },
         "active": active_payload,
+        "learningRule": learning,
     }
 
 
@@ -446,7 +634,7 @@ class UsageTracker:
         self.stop_tile = stop_tile
         self.clock = clock
         self.lock = threading.RLock()
-        self.usage = load_usage(self.path)
+        self.usage = load_usage(self.path, self.clock())
         self.active = None
         self.last_tick = None
         self.last_save = 0.0
@@ -503,9 +691,15 @@ class UsageTracker:
     def _roll_day(self):
         day = today_key(self.clock())
         if self.usage.get("date") != day:
-            self.usage = _empty_usage(day)
+            history = archive_day(
+                self.usage.get("history") or {}, self.usage.get("date"), self.usage.get("profiles") or {}, day
+            )
+            self.usage = _empty_usage(day, history)
             self.last_expiry = None
             self.dirty = True
+
+    def _history(self, profile_id):
+        return (self.usage.get("history") or {}).get(profile_id) or {}
 
     def _entry(self, profile_id):
         return self.usage["profiles"].setdefault(
@@ -550,7 +744,11 @@ class UsageTracker:
             if self.active:
                 profile = self.load_profiles().get(self.active["profileId"])
                 if profile:
-                    status = compute_status(profile, self.usage["profiles"].get(self.active["profileId"]), self.active, now=self.clock())
+                    profile_id = self.active["profileId"]
+                    status = compute_status(
+                        profile, self.usage["profiles"].get(profile_id), self.active,
+                        now=self.clock(), history=self._history(profile_id),
+                    )
                     remaining = (status.get("active") or {}).get("remainingSeconds")
                     if remaining is not None and remaining <= 0:
                         self._remember_expiry(status)
@@ -570,7 +768,9 @@ class UsageTracker:
     def _overrun(self, profile):
         """Segundos além do limite consumidos pelo app ativo."""
         entry = self.usage["profiles"].get(self.active["profileId"], {})
-        limits = limits_for_day(profile.get("categoryLimits"), weekday_key(self.clock()))
+        limits, _ = apply_learning_rule(
+            profile.get("categoryLimits"), self._history(self.active["profileId"]), entry, self.clock()
+        )
         overs = []
         total = limits.get("totalMinutes")
         if total is not None:
@@ -602,7 +802,10 @@ class UsageTracker:
         with self.lock:
             self._accrue()
             active = self.active if self.active and self.active["profileId"] == profile_id else None
-            payload = compute_status(profile, self.usage["profiles"].get(profile_id), active, now=self.clock())
+            payload = compute_status(
+                profile, self.usage["profiles"].get(profile_id), active,
+                now=self.clock(), history=self._history(profile_id),
+            )
             payload["date"] = self.usage["date"]
             payload["profileId"] = profile_id
             payload["now"] = int(self.clock())
