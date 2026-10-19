@@ -139,10 +139,11 @@ class LauncherFocusTests(unittest.TestCase):
         )
         raised = mock.Mock(returncode=0)
         activated = mock.Mock(returncode=0)
+        released = mock.Mock(returncode=0)
         with mock.patch.object(
             overlay.subprocess,
             "run",
-            side_effect=(listing, raised, activated),
+            side_effect=(listing, raised, activated, released),
         ) as run, mock.patch.object(overlay, "owned_process") as owned:
             overlay.focus_launcher()
 
@@ -161,6 +162,10 @@ class LauncherFocusTests(unittest.TestCase):
                 ),
                 mock.call(
                     ["wmctrl", "-i", "-a", "0x03"],
+                    check=False,
+                ),
+                mock.call(
+                    ["wmctrl", "-i", "-r", "0x03", "-b", "remove,above"],
                     check=False,
                 ),
             ],

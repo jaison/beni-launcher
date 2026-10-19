@@ -104,6 +104,15 @@ done
 P="$HOME/.cache/cozy-kids-launcher/external-firefox-profile"
 mkdir -p "$P/extensions"
 cp "$REPO/beni/firefox/uBlock0@raymondhill.net.xpi" "$P/extensions/"
+# Desenhos do Kleki (tile Desenhar) vão para ~/Imagens/Desenhos, sem o painel de
+# downloads (o ícone de pasta dele abriria o gerenciador de arquivos)
+DESENHOS="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Imagens")/Desenhos"
+mkdir -p "$DESENHOS"
+grep -q alwaysOpenPanel "$P/user.js" 2>/dev/null || printf '%s\n' \
+  'user_pref("browser.download.alwaysOpenPanel", false);' \
+  'user_pref("browser.download.folderList", 2);' \
+  "user_pref(\"browser.download.dir\", \"$DESENHOS\");" \
+  'user_pref("browser.download.useDownloadDir", true);' >> "$P/user.js"
 grep -q autoDisableScopes "$P/user.js" 2>/dev/null || printf '%s\n' \
   'user_pref("extensions.autoDisableScopes", 0);' \
   'user_pref("extensions.enabledScopes", 15);' >> "$P/user.js"

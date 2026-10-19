@@ -38,8 +38,7 @@
           "label": "Desenhar",
           "emoji": "🎨",
           "cmd": [
-            "tuxpaint",
-            "--fullscreen=yes"
+            "special:external-browser:https://kleki.com/"
           ],
           "visible": true,
           "category": "educativo"
@@ -518,8 +517,7 @@
           "label": "Desenhar",
           "emoji": "🎨",
           "cmd": [
-            "tuxpaint",
-            "--fullscreen=yes"
+            "special:external-browser:https://kleki.com/"
           ],
           "visible": true,
           "category": "educativo"

@@ -167,8 +167,11 @@ def focus_launcher():
             for line in result.stdout.splitlines():
                 if "Cozy Kids Launcher" in line or APP_NAME in line:
                     wid = line.split()[0]
+                    # "above" só para passar na frente agora; se ficar ligado,
+                    # o próximo app abre escondido atrás do launcher.
                     subprocess.run(["wmctrl", "-i", "-r", wid, "-b", "add,above"], check=False)
                     subprocess.run(["wmctrl", "-i", "-a", wid], check=False)
+                    subprocess.run(["wmctrl", "-i", "-r", wid, "-b", "remove,above"], check=False)
                     return
     except Exception:
         pass

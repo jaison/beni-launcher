@@ -29,7 +29,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
   - meninas: **Reino do Gelo**, **Casinha Mágica** e **Castelo Encantado**, com letras grandes e redondas para quem ainda está aprendendo a ler.
 - **Interface toda em português do Brasil**: a tela das crianças e toda a área dos pais (novo idioma `pt`).
 - **Apps melhores**:
-  - GCompris e Tux Paint em versões novas (Flathub);
+  - GCompris em versão nova (Flathub) e o Kleki para desenhar (no lugar do Tux Paint; os desenhos ficam em Imagens/Desenhos);
   - Scratch (TurboWarp), Luanti (parecido com Minecraft), Klavaro (digitação), Klotski, Pingus, Hex-a-hop, SuperTux, Frogatto e Stellarium;
   - sites educativos em português (Khan Academy, PhET com uma tela para escolher a matéria, Blockly Games, Escola Games sem anúncios e sem o menu de jogos de diversão);
   - jogos de vestir/maquiagem/boneca sem anúncios (itch.io).
