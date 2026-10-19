@@ -81,6 +81,9 @@ def effective_tile_category(tile):
 
 # ---------------------------------------------------------------- validação
 
+WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
 def _minutes(value, field, allow_none=True):
     if value is None and allow_none:
         return None
@@ -97,11 +100,63 @@ def validate_tile_category(value, field):
     return value
 
 
-def validate_category_limits(value, field="categoryLimits"):
-    """Normaliza {enabled,totalMinutes,categories:{id:{minutes,label?,emoji?}}}."""
+def _validate_weekdays(value, categories, field):
+    """{mon..sun: {totalMinutes?, categories?: {id: minutes}}}.
+
+    Campo ausente no dia = usa o valor padrão; null = sem limite nesse dia.
+    """
     if not isinstance(value, dict):
         raise ValueError(f"{field} must be an object")
-    unknown = set(value).difference(("enabled", "totalMinutes", "categories"))
+    clean = {}
+    for day, entry in value.items():
+        if day not in WEEKDAYS:
+            raise ValueError(f"{field} contains an invalid weekday")
+        if not isinstance(entry, dict) or set(entry).difference(("totalMinutes", "categories")):
+            raise ValueError(f"{field}.{day} must be an object")
+        item = {}
+        if "totalMinutes" in entry:
+            item["totalMinutes"] = _minutes(entry["totalMinutes"], f"{field}.{day}.totalMinutes")
+        cats = entry.get("categories", {})
+        if not isinstance(cats, dict):
+            raise ValueError(f"{field}.{day}.categories must be an object")
+        day_cats = {}
+        for category_id, minutes in cats.items():
+            if category_id not in categories:
+                continue  # categoria removida: ignora
+            if isinstance(minutes, dict):
+                minutes = minutes.get("minutes")
+            day_cats[category_id] = _minutes(minutes, f"{field}.{day}.categories.{category_id}")
+        if day_cats:
+            item["categories"] = day_cats
+        clean[day] = item
+    return clean
+
+
+def weekday_key(now=None):
+    moment = datetime.fromtimestamp(time.time() if now is None else now).astimezone()
+    return WEEKDAYS[moment.weekday()]
+
+
+def limits_for_day(limits, day):
+    """Limites que valem no dia (aplica categoryLimits.weekdays[day] sobre o padrão)."""
+    limits = limits or {}
+    override = (limits.get("weekdays") or {}).get(day)
+    if not override:
+        return limits
+    result = copy.deepcopy(limits)
+    if "totalMinutes" in override:
+        result["totalMinutes"] = override["totalMinutes"]
+    for category_id, minutes in (override.get("categories") or {}).items():
+        if category_id in result.get("categories", {}):
+            result["categories"][category_id]["minutes"] = minutes
+    return result
+
+
+def validate_category_limits(value, field="categoryLimits"):
+    """Normaliza {enabled,totalMinutes,categories:{id:{minutes,label?,emoji?}},weekdays?}."""
+    if not isinstance(value, dict):
+        raise ValueError(f"{field} must be an object")
+    unknown = set(value).difference(("enabled", "totalMinutes", "categories", "weekdays"))
     if unknown:
         raise ValueError(f"{field} contains unsupported fields")
     enabled = value.get("enabled", False)
@@ -130,7 +185,10 @@ def validate_category_limits(value, field="categoryLimits"):
                     raise ValueError(f"{field}.categories.{category_id}.{key} is invalid")
                 item[key] = text
         clean[category_id] = item
-    return {"enabled": enabled, "totalMinutes": total, "categories": clean}
+    result = {"enabled": enabled, "totalMinutes": total, "categories": clean}
+    if value.get("weekdays"):
+        result["weekdays"] = _validate_weekdays(value["weekdays"], clean, f"{field}.weekdays")
+    return result
 
 
 # ------------------------------------------------------------- persistência
@@ -223,9 +281,11 @@ def _remaining(limit_minutes, used_seconds):
     return int(limit_minutes * 60 - used_seconds)
 
 
-def compute_status(profile, usage_entry, active=None):
-    """Retorna o payload público de uso para um perfil."""
-    limits = profile.get("categoryLimits") or {}
+def compute_status(profile, usage_entry, active=None, now=None):
+    """Retorna o payload público de uso para um perfil (limites do dia de hoje)."""
+    day = weekday_key(now)
+    base_limits = profile.get("categoryLimits") or {}
+    limits = limits_for_day(base_limits, day)
     enabled = bool(limits.get("enabled"))
     usage_entry = usage_entry or {"totalSeconds": 0.0, "categories": {}}
     used_total = usage_entry.get("totalSeconds", 0.0)
@@ -306,6 +366,8 @@ def compute_status(profile, usage_entry, active=None):
 
     return {
         "enabled": enabled,
+        "weekday": day,
+        "weekdayLimits": bool(base_limits.get("weekdays")),
         "totalMinutes": total_limit,
         "totalUsedSeconds": int(used_total),
         "totalRemainingSeconds": None if total_remaining is None else max(0, total_remaining),
@@ -445,7 +507,7 @@ class UsageTracker:
             if self.active:
                 profile = self.load_profiles().get(self.active["profileId"])
                 if profile:
-                    status = compute_status(profile, self.usage["profiles"].get(self.active["profileId"]), self.active)
+                    status = compute_status(profile, self.usage["profiles"].get(self.active["profileId"]), self.active, now=self.clock())
                     remaining = (status.get("active") or {}).get("remainingSeconds")
                     if remaining is not None and remaining <= 0:
                         self._remember_expiry(status)
@@ -465,7 +527,7 @@ class UsageTracker:
     def _overrun(self, profile):
         """Segundos além do limite consumidos pelo app ativo."""
         entry = self.usage["profiles"].get(self.active["profileId"], {})
-        limits = profile.get("categoryLimits") or {}
+        limits = limits_for_day(profile.get("categoryLimits"), weekday_key(self.clock()))
         overs = []
         total = limits.get("totalMinutes")
         if total is not None:
@@ -496,7 +558,7 @@ class UsageTracker:
         with self.lock:
             self._accrue()
             active = self.active if self.active and self.active["profileId"] == profile_id else None
-            payload = compute_status(profile, self.usage["profiles"].get(profile_id), active)
+            payload = compute_status(profile, self.usage["profiles"].get(profile_id), active, now=self.clock())
             payload["date"] = self.usage["date"]
             payload["profileId"] = profile_id
             payload["now"] = int(self.clock())

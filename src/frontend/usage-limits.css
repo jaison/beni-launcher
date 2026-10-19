@@ -47,3 +47,13 @@ body.theme-ninja .usage-pill.usage-low .usage-count, body.theme-ninja .usage-pil
 .usage-tile-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:6px 16px; margin-top:var(--space-2,8px); max-height:320px; overflow:auto; padding-right:4px; }
 .usage-tile-row { display:grid; grid-template-columns:1fr 170px; align-items:center; gap:8px; font-size:.92rem; }
 .usage-tile-row.usage-tile-hidden { opacity:.6; }
+
+/* Limites por dia da semana */
+.usage-weekday-toggle { margin-top:var(--space-2,8px); font-weight:700; }
+.usage-weekday-wrap { overflow-x:auto; display:grid; gap:var(--space-2,8px); justify-items:start; }
+.usage-weekday-table { border-collapse:separate; border-spacing:4px; }
+.usage-weekday-table th { font-weight:800; text-align:center; white-space:nowrap; padding:2px 4px; }
+.usage-weekday-table th[scope=row] { text-align:left; padding-right:10px; }
+.usage-weekday-table th.usage-weekend-col { color:#d97706; }
+.usage-weekday-table td input { width:76px; }
+.usage-weekday-table .usage-today-col { background:color-mix(in srgb, #fde047 35%, transparent); border-radius:8px; }

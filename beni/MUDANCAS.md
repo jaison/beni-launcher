@@ -11,8 +11,8 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 ## Arquivos novos (`src/`)
 | Arquivo | Para quê |
 |---|---|
-| `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. |
-| `frontend/usage-limits.js` / `.css` | Medidores na barra de baixo, mensagens de "tempo acabou" e painel em Pais → Tempo de tela. |
+| `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. Opcional: limite diferente em cada dia da semana (`categoryLimits.weekdays.{mon..sun}`; campo ausente = usa o padrão, `null` = sem limite). |
+| `frontend/usage-limits.js` / `.css` | Medidores na barra de baixo, mensagens de "tempo acabou" e painel em Pais → Tempo de tela (com a tabela Seg–Dom de "Tempo diferente em cada dia da semana"). |
 | `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Jogar" e lista filtrada por categoria. |
 | `frontend/cozy-temas.css` | Temas heroi, blocos, ninja, gelo, casinha e castelo; estilos da prévia; capas de jogos nos tiles. |
 | `frontend/locales/pt.json` | Português do Brasil (todas as 237 chaves do inglês). |
@@ -40,6 +40,7 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 ## `scripts/` e `tests/`
 - `scripts/install.sh`: também copia `usage_limits.py`, `pt.json` e os CSS/JS novos.
 - `tests/test_server.py`: 2 asserções ajustadas (texto já traduzido; campo `limitBlocked`).
+- `tests/test_usage_limits.py` (novo): limites por dia da semana.
 - `tests/test_overlay.py` passa sem mudança. O `overlay.py` só pede `XMoveWindow` ao X11 quando vai usar.
 
 ## Fora do launcher (`beni/`)

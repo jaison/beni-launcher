@@ -175,6 +175,63 @@ function minutesInput(value,label,onchange){
   input.onchange=()=>onchange(parseLimitInput(input));
   return input;
 }
+const USAGE_WEEKDAYS=[
+  {id:'mon',label:'Seg'},{id:'tue',label:'Ter'},{id:'wed',label:'Qua'},{id:'thu',label:'Qui'},
+  {id:'fri',label:'Sex'},{id:'sat',label:'Sáb'},{id:'sun',label:'Dom'},
+];
+function usageTodayWeekday(){ return ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()]; }
+function usageDayFromDefault(limits){
+  const categories={};
+  for(const id of Object.keys(limits.categories)) categories[id]=limits.categories[id].minutes??null;
+  return {totalMinutes:limits.totalMinutes??null,categories};
+}
+function usageWeekdayTable(limits){
+  const wrap=document.createElement('div');
+  wrap.className='usage-weekday-wrap';
+  const table=document.createElement('table');
+  table.className='usage-weekday-table';
+  const today=usageTodayWeekday();
+  const head=table.createTHead().insertRow();
+  head.appendChild(document.createElement('th'));
+  for(const day of USAGE_WEEKDAYS){
+    const th=document.createElement('th');
+    th.textContent=day.label+(day.id===today?' (hoje)':'');
+    if(day.id===today) th.className='usage-today-col';
+    if(day.id==='sat'||day.id==='sun') th.classList.add('usage-weekend-col');
+    head.appendChild(th);
+  }
+  const body=table.createTBody();
+  const rows=[{id:'',label:'⏳ Total do dia'}].concat(Object.keys(limits.categories).map(id=>{
+    const d=categoryDisplay(id); return {id,label:d.emoji+' '+d.label};
+  }));
+  for(const rowDef of rows){
+    const row=body.insertRow();
+    const th=document.createElement('th'); th.scope='row'; th.textContent=rowDef.label; row.appendChild(th);
+    for(const day of USAGE_WEEKDAYS){
+      const entry=limits.weekdays[day.id]||(limits.weekdays[day.id]=usageDayFromDefault(limits));
+      if(!entry.categories) entry.categories={};
+      const value=rowDef.id===''
+        ? ('totalMinutes' in entry?entry.totalMinutes:limits.totalMinutes)
+        : (rowDef.id in entry.categories?entry.categories[rowDef.id]:limits.categories[rowDef.id].minutes);
+      const cell=row.insertCell();
+      if(day.id===today) cell.className='usage-today-col';
+      cell.appendChild(minutesInput(value,rowDef.label+' — '+day.label,v=>{
+        if(rowDef.id==='') entry.totalMinutes=v; else entry.categories[rowDef.id]=v;
+      }));
+    }
+  }
+  wrap.appendChild(table);
+  // Atalho: copiar a segunda para os outros dias úteis
+  const copy=document.createElement('button');
+  copy.type='button'; copy.className='smallbtn';
+  copy.textContent='Copiar Seg para Ter–Sex';
+  copy.onclick=()=>{
+    for(const id of ['tue','wed','thu','fri']) limits.weekdays[id]=JSON.parse(JSON.stringify(limits.weekdays.mon));
+    renderUsageLimitSettings();
+  };
+  wrap.appendChild(copy);
+  return wrap;
+}
 function renderUsageLimitSettings(){
   const panel=document.getElementById('usageLimitSettings');
   if(!panel||!cfg) return;
@@ -195,14 +252,40 @@ function renderUsageLimitSettings(){
     row.append(span,input,unit);
     fields.appendChild(row);
   };
-  addRow('⏳ Total do dia',minutesInput(limits.totalMinutes,'Total do dia em minutos',v=>{ limits.totalMinutes=v; }));
-  for(const id of Object.keys(limits.categories)){
-    const d=categoryDisplay(id);
-    addRow(d.emoji+' '+d.label,minutesInput(limits.categories[id].minutes,d.label+' em minutos',v=>{ limits.categories[id].minutes=v; }));
+  const byDay=!!(limits.weekdays&&Object.keys(limits.weekdays).length);
+  if(!byDay){
+    addRow('⏳ Total do dia',minutesInput(limits.totalMinutes,'Total do dia em minutos',v=>{ limits.totalMinutes=v; }));
+    for(const id of Object.keys(limits.categories)){
+      const d=categoryDisplay(id);
+      addRow(d.emoji+' '+d.label,minutesInput(limits.categories[id].minutes,d.label+' em minutos',v=>{ limits.categories[id].minutes=v; }));
+    }
   }
+  // Dias da semana
+  const dayToggle=document.createElement('label');
+  dayToggle.className='chk usage-weekday-toggle';
+  const dayCheck=document.createElement('input');
+  dayCheck.type='checkbox'; dayCheck.checked=byDay;
+  dayCheck.onchange=()=>{
+    if(dayCheck.checked){
+      limits.weekdays={};
+      for(const day of USAGE_WEEKDAYS) limits.weekdays[day.id]=usageDayFromDefault(limits);
+    }else{
+      // volta ao modo "todo dia igual" usando os valores de segunda
+      const mon=(limits.weekdays||{}).mon;
+      if(mon){
+        if('totalMinutes' in mon) limits.totalMinutes=mon.totalMinutes;
+        for(const [id,min] of Object.entries(mon.categories||{})) if(limits.categories[id]) limits.categories[id].minutes=min;
+      }
+      delete limits.weekdays;
+    }
+    renderUsageLimitSettings();
+  };
+  dayToggle.append(dayCheck,document.createTextNode(' 📅 Tempo diferente em cada dia da semana'));
+  fields.appendChild(dayToggle);
+  if(byDay) fields.appendChild(usageWeekdayTable(limits));
   const hint=document.createElement('p');
   hint.className='muted';
-  hint.textContent='O tempo só conta enquanto um app ou site da categoria está aberto e zera à meia-noite. Campo vazio = sem limite. Clique em Salvar para aplicar.';
+  hint.textContent='O tempo só conta enquanto um app ou site da categoria está aberto e zera à meia-noite. Campo vazio = sem limite. Clique em Salvar para aplicar.'+(byDay?' Cada dia usa a sua coluna.':'');
   fields.appendChild(hint);
 
   // Categoria de cada tile
