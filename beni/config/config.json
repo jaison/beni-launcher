@@ -64,6 +64,16 @@
           "category": "passatempo"
         },
         {
+          "id": "teachyourmonster",
+          "label": "Teach Your Monster",
+          "emoji": "👾",
+          "cmd": [
+            "special:external-browser:https://www.teachyourmonster.org/account/play"
+          ],
+          "visible": true,
+          "category": "passatempo"
+        },
+        {
           "id": "games",
           "label": "Jogos educativos",
           "emoji": "🧩",
@@ -562,6 +572,16 @@
           "emoji": "🖍️",
           "cmd": [
             "special:external-browser:https://colorir-online.com/"
+          ],
+          "visible": true,
+          "category": "passatempo"
+        },
+        {
+          "id": "teachyourmonster",
+          "label": "Teach Your Monster",
+          "emoji": "👾",
+          "cmd": [
+            "special:external-browser:https://www.teachyourmonster.org/account/play"
           ],
           "visible": true,
           "category": "passatempo"

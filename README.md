@@ -39,7 +39,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
 ### Para os pais
 - **Coleções do itch.io**: cada criança tem uma coleção pública no itch.io. Jogo que você adiciona na coleção vira ícone, com a capa, no perfil da criança, e jogo removido some. A sincronização roda no login e a cada 30 min. Os pais testam o jogo antes e só então distribuem.
 - Em Pais → Tempo de tela → **Limite diário por categoria** você define os minutos (também diferentes em cada dia da semana, por exemplo mais jogo no fim de semana), escolhe a categoria de cada app e zera o tempo do dia.
-- **Login automático no Khan Academy**: em Pais → Crianças → "🔑 Login automático nos sites" você salva o e-mail e a senha da conta da criança; ao abrir o Khan, o launcher entra sozinho. Cada criança tem o seu navegador de sites, então os logins não se misturam.
+- **Login automático no Khan Academy e no Teach Your Monster**: em Pais → Crianças → "🔑 Login automático nos sites" você salva o e-mail e a senha da conta da criança; ao abrir o site, o launcher entra sozinho. Cada criança tem o seu navegador de sites, então os logins não se misturam.
 - **Internet com filtro**: o notebook usa o DNS CleanBrowsing Family em qualquer Wi‑Fi. Sites adultos, proxies e VPNs ficam bloqueados, e a Busca Segura do Google e o Modo Restrito do YouTube são obrigatórios.
 - Em Pais → Aparência → **Tela inicial** você liga ou desliga a pergunta Aprender/Passatempo/Jogar em cada perfil.
 - A prévia da aparência mostra o visual dos temas novos e as capas dos jogos.

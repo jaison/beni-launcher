@@ -1,4 +1,4 @@
-"""Login automático em sites (por enquanto só o Khan Academy), por perfil.
+"""Login automático em sites (Khan Academy, Teach Your Monster), por perfil.
 
 O e-mail e a senha ficam em ~/.config/cozy-kids-launcher/site-logins.json
 (permissão 600), fora do config.json, e a senha nunca volta para a página:
@@ -29,6 +29,18 @@ SITES = {
         "submit_selector": "[data-testid=log-in-submit-button]",
         # aviso de cookies (TrustArc): "Somente os necessários"
         "dismiss_selectors": ("#truste-consent-required",),
+        "continue_param": "continue",
+    },
+    "teachyourmonster": {
+        "label": "Teach Your Monster",
+        "hosts": ("teachyourmonster.org",),
+        "login_url": "https://www.teachyourmonster.org/account/users/sign_in",
+        # conta de família: aba "Home" (as outras são Student e Teacher)
+        "pre_click_selectors": ("#tab_home",),
+        "user_selector": "form.user.home input[name='oog_user[email]']",
+        "password_selector": "form.user.home input[name='oog_user[password]']",
+        "submit_selector": "form.user.home button[type=submit]",
+        "dismiss_selectors": (),
     },
 }
 
@@ -185,8 +197,9 @@ class Marionette:
 
 
 _FILL_SCRIPT = """
-const [user, pass, userSel, passSel, submitSel, dismiss] = arguments;
+const [user, pass, userSel, passSel, submitSel, dismiss, preClick] = arguments;
 for (const sel of dismiss) { const b = document.querySelector(sel); if (b && b.offsetParent) b.click(); }
+for (const sel of preClick) { const b = document.querySelector(sel); if (b) b.click(); }
 const u = document.querySelector(userSel), p = document.querySelector(passSel), s = document.querySelector(submitSel);
 if (!u || !p || !s) return 'wait';
 const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -210,9 +223,10 @@ def auto_login(site, username, password, target_url, port=MARIONETTE_PORT, log=N
         client.cmd("WebDriver:NewSession", {"capabilities": {"pageLoadStrategy": "eager"}})
         login_path = urlparse(info["login_url"]).path
         target_path = urlparse(target_url).path or "/"
-        client.cmd("WebDriver:Navigate", {
-            "url": info["login_url"] + "?continue=" + quote(target_path, safe="/"),
-        })
+        login_url = info["login_url"]
+        if info.get("continue_param"):
+            login_url += "?" + info["continue_param"] + "=" + quote(target_path, safe="/")
+        client.cmd("WebDriver:Navigate", {"url": login_url})
         deadline = time.time() + timeout
         sent = False
         while time.time() < deadline:
@@ -224,7 +238,7 @@ def auto_login(site, username, password, target_url, port=MARIONETTE_PORT, log=N
                 if client.script(
                     _FILL_SCRIPT, username, password, info["user_selector"],
                     info["password_selector"], info["submit_selector"],
-                    list(info["dismiss_selectors"]),
+                    list(info.get("dismiss_selectors", ())), list(info.get("pre_click_selectors", ())),
                 ) == "sent":
                     sent = True
                     sent_at = time.time()
@@ -234,8 +248,10 @@ def auto_login(site, username, password, target_url, port=MARIONETTE_PORT, log=N
             time.sleep(0.7)
         else:
             result = "failed"
-        if result == "ok" and urlparse(client.script("return location.href") or "").path in ("", "/"):
-            client.cmd("WebDriver:Navigate", {"url": target_url})
+        if result in ("ok", "already"):
+            # depois do login, vai para a página do tile (se o site não foi sozinho)
+            if urlparse(client.script("return location.href") or "").path.rstrip("/") != target_path.rstrip("/"):
+                client.cmd("WebDriver:Navigate", {"url": target_url})
         log("site_login.finished", result={"ok": "success", "already": "already"}.get(result, "failure"))
         return result
     except Exception as exc:  # noqa: BLE001 — nunca derruba o launcher

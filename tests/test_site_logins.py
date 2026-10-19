@@ -25,6 +25,7 @@ class SiteLoginStoreTest(unittest.TestCase):
         mode = stat.S_IMODE(os.stat(self.path).st_mode)
         self.assertEqual(mode, 0o600)
         view = site_logins.public_logins(self.path, "default")
+        self.assertEqual([v["id"] for v in view], ["khan", "teachyourmonster"])
         self.assertEqual(view[0]["username"], "beni@example.com")
         self.assertTrue(view[0]["hasPassword"])
         self.assertNotIn("s3cret!", json.dumps(view))
@@ -52,6 +53,7 @@ class SiteLoginStoreTest(unittest.TestCase):
         self.assertEqual(site_logins.site_for_url("https://www.khanacademy.org/math"), "khan")
         self.assertIsNone(site_logins.site_for_url("https://evilkhanacademy.org/"))
         self.assertIsNone(site_logins.site_for_url("https://kleki.com/"))
+        self.assertEqual(site_logins.site_for_url("https://www.teachyourmonster.org/account/play"), "teachyourmonster")
 
 
 class ExternalProfileTest(unittest.TestCase):
