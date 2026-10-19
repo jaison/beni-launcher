@@ -7,3 +7,4 @@ assets/screenshots/*.webp
 __pycache__/
 *.pyc
 .test-artifacts/
+.claude/
