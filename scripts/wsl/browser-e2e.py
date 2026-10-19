@@ -1082,55 +1082,25 @@ def run_scenarios(browser, release_fixture, installed_version, artifacts):
     )
     log_scenario("screen timer starts, renders its badge, and stops")
 
-    release_fixture.latest_version = installed_version
-    release_fixture.mode = "ok"
+    # Beni Launcher: as atualizações são automáticas (beni-atualizar); o botão só
+    # mostra o estado e nunca oferece "Atualizar agora".
     browser.click("[data-admin-section='system']")
     browser.click("#checkUpdateBtn")
+    encoded_installed = json.dumps(installed_version)
     browser.wait_for(
         "document.getElementById('checkUpdateBtn').disabled === false && "
-        "document.querySelector('#updateMsg .ui-state-message').textContent === uiText.updateUpToDate",
-        message="Up-to-date check did not finish",
+        "document.querySelector('#updateMsg .ui-state-message') !== null && "
+        "!document.querySelector('#updateMsg').textContent.includes(uiText.updateLoading)",
+        message="Update status check did not finish",
     )
     assert_js(
         browser,
-        "document.querySelector('#updateMsg .ui-state-message').textContent === uiText.updateUpToDate && "
-        "document.getElementById('updateRow').style.display === 'none'",
-        "Up-to-date state was not rendered",
-    )
-
-    installed_major = int(installed_version.split(".", maxsplit=1)[0])
-    available_version = f"{installed_major + 1}.0.0"
-    release_fixture.latest_version = available_version
-    browser.click("#checkUpdateBtn")
-    encoded_available = json.dumps(available_version)
-    browser.wait_for(
-        "document.getElementById('checkUpdateBtn').disabled === false && "
-        f"document.getElementById('updateMsg').textContent.includes({encoded_available})",
-        message="Available-update check did not finish",
-    )
-    update_message = browser.evaluate("document.getElementById('updateMsg').textContent")
-    update_visible = browser.evaluate(
-        "document.getElementById('updateRow').style.display === 'grid'"
-    )
-    if available_version not in update_message or update_visible is not True:
-        raise AssertionError("Available-update state was not rendered")
-
-    release_fixture.mode = "error"
-    browser.click("#checkUpdateBtn")
-    browser.wait_for(
-        "document.getElementById('checkUpdateBtn').disabled === false && "
-        "document.querySelector('#updateMsg .ui-state-message').textContent === uiText.updateError",
-        message="Failed update check did not finish",
-    )
-    assert_js(
-        browser,
-        "document.querySelector('#updateMsg .ui-state-message').textContent === uiText.updateError && "
         "document.getElementById('updateRow').style.display === 'none' && "
-        "document.getElementById('checkUpdateBtn').disabled === false && "
-        "document.querySelector('#updateMsg .ui-state-retry')!==null",
-        "Update error state was not rendered or did not recover",
+        f"document.getElementById('versionDisplay').textContent.includes({encoded_installed}) && "
+        "/Atualiza[çc][õo]es autom[áa]ticas|Em dia|baixada/.test(document.getElementById('updateMsg').textContent)",
+        "Automatic-update status was not rendered",
     )
-    log_scenario("update check renders current, available, and error states")
+    log_scenario("update panel shows the automatic-update status")
 
 
 def run_accessibility_scenarios(browser, artifacts):

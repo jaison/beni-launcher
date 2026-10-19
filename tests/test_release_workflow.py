@@ -18,19 +18,17 @@ class StableMainReleaseContractTests(unittest.TestCase):
         self.assertIn("branches: [main, develop]", workflow)
         self.assertIn("src/schedule_rules.py", workflow)
 
-    def test_release_is_published_before_main_is_promoted(self):
+    def test_release_workflow_checks_tag_against_version(self):
+        # Beni Launcher: os notebooks baixam o pacote da própria tag
+        # (beni/sistema/beni-atualizar); o workflow só confere a release.
         workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "release.yml").read_text(
             encoding="utf-8"
         )
-        publish = 'gh release edit "$GITHUB_REF_NAME" --draft=false'
-        promote = 'git push "git@github.com:$GITHUB_REPOSITORY.git" "$GITHUB_SHA:refs/heads/main"'
-        self.assertIn(publish, workflow)
-        self.assertIn(promote, workflow)
-        self.assertLess(workflow.index(publish), workflow.index(promote))
-        self.assertIn("git merge-base --is-ancestor", workflow)
-        self.assertIn("group: stable-release-promotion", workflow)
-        self.assertIn("secrets.RELEASE_DEPLOY_KEY", workflow)
-        self.assertIn('git ls-remote "git@github.com:$GITHUB_REPOSITORY.git"', workflow)
+        self.assertIn('tag="${GITHUB_REF_NAME#v}"', workflow)
+        self.assertIn("< VERSION", workflow)
+        self.assertIn("python -m unittest discover -s tests", workflow)
+        self.assertNotIn("secrets.", workflow)
+        self.assertIn("contents: read", workflow)
 
     @unittest.skip("Beni Launcher: o workflow stable-main do projeto original foi removido no fork")
     def test_stable_main_check_compares_commit_with_latest_release_tag(self):
