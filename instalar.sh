@@ -100,6 +100,13 @@ for P in "$HOME/.cache/cozy-kids-launcher/firefox-profile" "$HOME/.cache/cozy-ki
     'user_pref("accessibility.browsewithcaret", false);' \
     'user_pref("accessibility.browsewithcaret_shortcut.enabled", false);' >> "$P/user.js"
 done
+# Sites abertos pelo launcher (Escola Games etc.): bloqueador de anúncios uBlock Origin
+P="$HOME/.cache/cozy-kids-launcher/external-firefox-profile"
+mkdir -p "$P/extensions"
+cp "$REPO/beni/firefox/uBlock0@raymondhill.net.xpi" "$P/extensions/"
+grep -q autoDisableScopes "$P/user.js" 2>/dev/null || printf '%s\n' \
+  'user_pref("extensions.autoDisableScopes", 0);' \
+  'user_pref("extensions.enabledScopes", 15);' >> "$P/user.js"
 
 passo "Abrir sozinho no login + sincronizar o itch.io a cada 30 min"
 mkdir -p "$HOME/.config/autostart" "$HOME/.config/systemd/user"
