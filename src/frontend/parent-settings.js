@@ -20,24 +20,31 @@ function parseBrowserAllowedOrigins(value){
 // Update check
 let installedVersion='0.0.0';
 async function checkUpdate(){
+  // Atualizações automáticas (beni-atualizar): só mostra o estado.
   const btn=document.getElementById('checkUpdateBtn');
   const msg=document.getElementById('updateMsg');
-  const updateRow=document.getElementById('updateRow');
-  updateRow.style.display='none';
+  document.getElementById('updateRow').style.display='none';
   btn.disabled=true;
   renderUiState(msg,'loading',uiText.updateLoading);
   try{
     const statusR=await fetch('/api/update/status',{cache:'no-store'});
     if(!statusR.ok) throw new Error('fetch failed');
-    const status=await statusR.json();
-    installedVersion=status.installedVersion||'0.0.0';
-    document.getElementById('versionDisplay').textContent=(uiText.versionLabel||'Version')+': '+installedVersion;
-    if(status.updateAvailable){
-      renderUiState(msg,'success',(uiText.updateAvailable||'Update available')+': '+status.latestVersion);
-      updateRow.style.display='grid';
+    const st=await statusR.json();
+    installedVersion=st.installedVersion||'0.0.0';
+    document.getElementById('versionDisplay').textContent=(uiText.versionLabel||'Versão')+': '+installedVersion;
+    const quando=v=>{ if(!v) return ''; const d=new Date(v); return isNaN(d)?v:d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}); };
+    let texto, tipo='success';
+    if(!st.autoUpdate){
+      texto='Atualizações automáticas desligadas neste computador (rode ./instalar.sh para ligar).'; tipo='error';
+    }else if(st.staged){
+      texto='Versão '+st.staged+' baixada. '+(st.forced
+        ?'Vai ser instalada assim que nenhum app estiver aberto.'
+        :'Vai ser instalada quando o notebook for ligado de novo (ou de madrugada, se ficar ligado).');
     }else{
-      renderUiState(msg,'success',uiText.updateUpToDate||'Up to date');
+      texto='Em dia (versão '+installedVersion+'). Atualizações automáticas ligadas'+(st.lastCheck?'; última verificação: '+quando(st.lastCheck):'')+'.';
     }
+    if(st.lastError){ texto+=' ⚠ '+st.lastError; if(!st.staged) tipo='error'; }
+    renderUiState(msg,tipo,texto);
   }catch(e){
     renderUiState(msg,'error',uiText.updateError||'Update check failed',checkUpdate);
   }finally{
@@ -45,15 +52,10 @@ async function checkUpdate(){
   }
 }
 async function startupUpdateCheck(){
+  // A atualização é automática: não mostra o selo "1" no botão dos pais.
   try{
     const statusR=await fetch('/api/update/status',{cache:'no-store'});
-    if(!statusR.ok) return;
-    const status=await statusR.json();
-    installedVersion=status.installedVersion||'0.0.0';
-    if(status.updateAvailable){
-      updateAvailable=true;
-      renderAll();
-    }
+    if(statusR.ok) installedVersion=(await statusR.json()).installedVersion||'0.0.0';
   }catch(e){}
 }
 async function installUpdate(){ if(!(await requestConfirmation(uiText.updateConfirm||'Close browser and install update now?',uiText.updateNow))) return; try{ await fetch('/api/update',{method:'POST'}); }catch(e){} document.getElementById('updating').classList.remove('hidden'); setTimeout(()=>{ fetch('/exit-kids',{method:'POST'}).catch(()=>{}); }, 3000); }

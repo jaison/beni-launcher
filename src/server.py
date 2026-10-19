@@ -145,11 +145,11 @@ UPDATE_SCRIPT = os.path.join(APP_ROOT, "update.sh")
 UPDATE_CHANNEL_FILE = os.path.join(APP_ROOT, "update-channel")
 LATEST_RELEASE_API = os.environ.get(
     "COZY_KIDS_RELEASE_API_URL",
-    "https://api.github.com/repos/TrissyGE/cozy-kids-launcher/releases/latest",
+    "https://api.github.com/repos/jaison/beni-launcher/releases/latest",
 )
 LEGACY_RAW_URL = os.environ.get(
     "COZY_KIDS_RAW_URL",
-    "https://raw.githubusercontent.com/TrissyGE/cozy-kids-launcher/main",
+    "https://raw.githubusercontent.com/jaison/beni-launcher/main",
 ).rstrip("/")
 LEGACY_VERSION_URL = f"{LEGACY_RAW_URL}/VERSION"
 CFG = os.path.join(HOME, ".config", "cozy-kids-launcher", "config.json")
@@ -493,7 +493,46 @@ def _fetch_remote_text(url, timeout=5):
     return fetch_update_text(url, timeout=timeout)
 
 
+# Estado do atualizador automático deste projeto (beni/sistema/beni-atualizar).
+AUTO_UPDATE_STATE = "/var/lib/beni-launcher/estado.json"
+AUTO_UPDATE_TIMER = "/etc/systemd/system/beni-atualizar-verificar.timer"
+
+
+def auto_update_status(state_file=AUTO_UPDATE_STATE, timer_file=AUTO_UPDATE_TIMER):
+    """O que o atualizador automático já fez: versão baixada, última verificação, erro."""
+    try:
+        with open(state_file, encoding="utf-8") as handle:
+            state = json.load(handle)
+        if not isinstance(state, dict):
+            state = {}
+    except (OSError, ValueError):
+        state = {}
+    installed = get_version()
+    staged = state.get("baixada") if isinstance(state.get("baixada"), str) else None
+    latest = state.get("disponivel") if isinstance(state.get("disponivel"), str) else installed
+    def text(key, limit=300):
+        value = state.get(key)
+        return value[:limit] if isinstance(value, str) else None
+    return {
+        "installedVersion": installed,
+        "latestVersion": staged or latest,
+        "source": "release",
+        "updateAvailable": False,   # instala sozinho: sem botão "Atualizar agora"
+        "autoUpdate": os.path.isfile(timer_file),
+        "staged": staged,
+        "forced": bool(state.get("forcada")) and bool(staged),
+        "lastCheck": text("ultimaVerificacao", 40),
+        "installedAt": text("instaladaEm", 40),
+        "lastError": text("erro"),
+        "notes": text("notas", 1000),
+    }
+
+
 def get_update_status(timeout=5):
+    return auto_update_status()
+
+
+def legacy_update_status(timeout=5):
     return resolve_update_status(
         get_version(),
         LATEST_RELEASE_API,

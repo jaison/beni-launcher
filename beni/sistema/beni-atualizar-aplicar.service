@@ -1,0 +1,14 @@
+[Unit]
+Description=Beni Launcher: instalar a atualização baixada (no boot, antes do menu)
+# só roda se houver uma versão baixada esperando
+ConditionPathExists=/var/lib/beni-launcher/baixada/pacote.tar.gz
+After=local-fs.target NetworkManager.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/beni-atualizar aplicar
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

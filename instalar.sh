@@ -6,8 +6,12 @@
 #  todos os ajustes descritos no README.
 #
 #  Uso (como o usuário que a criança vai usar, NÃO como root):
-#     ./instalar.sh            instala/atualiza tudo
-#     ./instalar.sh --sem-apps só o launcher e os ajustes (pula apt/flatpak)
+#     ./instalar.sh            instala/atualiza tudo (pede a senha para a parte
+#                              do sistema: pacotes, Firefox, DNS, atualizador)
+#     ./instalar.sh --sem-apps não instala pacotes apt/flatpak
+#     ./instalar.sh --atualizacao
+#                              usado pelo atualizador automático (beni-atualizar):
+#                              só a parte do usuário, sem sudo e sem internet
 #
 #  É seguro rodar de novo: atualiza os arquivos e NÃO apaga a configuração
 #  existente (~/.config/cozy-kids-launcher/config.json) nem os jogos.
@@ -19,8 +23,14 @@ APP_ROOT="$HOME/.local/share/cozy-kids-launcher"
 CFG_DIR="$HOME/.config/cozy-kids-launcher"
 BIN="$HOME/.local/bin"
 CHROMIUM_DIR="$HOME/.var/app/org.chromium.Chromium"
-SEM_APPS=0
-[[ "${1:-}" == "--sem-apps" ]] && SEM_APPS=1
+SEM_APPS=0; ATUALIZACAO=0
+for arg in "$@"; do
+  case "$arg" in
+    --sem-apps) SEM_APPS=1 ;;
+    --atualizacao) ATUALIZACAO=1 ;;
+    *) echo "opção desconhecida: $arg" >&2; exit 2 ;;
+  esac
+done
 
 passo() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 aviso() { printf '\033[1;33m[aviso]\033[0m %s\n' "$*"; }
@@ -30,20 +40,10 @@ if [[ $EUID -eq 0 ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-if [[ $SEM_APPS -eq 0 ]]; then
-  passo "Pacotes do sistema (apt) — vai pedir a senha"
-  sudo apt-get update
-  sudo apt-get install -y \
-    python3 python3-tk firefox wmctrl xdotool x11-utils x11-xserver-utils gcc \
-    flatpak network-manager librsvg2-bin espeak-ng speech-dispatcher \
-    tuxmath supertuxkart supertux pingus hex-a-hop frogatto stellarium \
-    retroarch libretro-snes9x pcsxr
-
-  passo "Apps do Flathub (versões novas e caprichadas)"
-  sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-  sudo flatpak install -y --noninteractive flathub \
-    org.kde.gcompris org.tuxpaint.Tuxpaint org.turbowarp.TurboWarp org.luanti.luanti \
-    net.sourceforge.Klavaro org.gnome.Klotski org.chromium.Chromium
+if [[ $ATUALIZACAO -eq 0 ]]; then
+  passo "Parte do sistema (pacotes, Firefox, DNS com filtro, atualizador) — vai pedir a senha"
+  OPC=(); [[ $SEM_APPS -eq 1 ]] && OPC+=(--sem-pacotes)
+  sudo bash "$REPO/beni/sistema/instalar-sistema.sh" "${OPC[@]}" "$USER"
 fi
 
 # -----------------------------------------------------------------------------
@@ -52,10 +52,12 @@ mkdir -p "$APP_ROOT/themes/covers" "$APP_ROOT/themes/fonts"
 # copia o código; não apaga capas baixadas (themes/covers)
 cp -r "$REPO/src/." "$APP_ROOT/"
 rm -f "$APP_ROOT/launcher.sh"   # template do projeto original; usamos beni/bin/cozy-kids-launcher
+# O atualizador do projeto original instalaria o Cozy Kids Launcher por cima deste projeto.
+rm -f "$APP_ROOT/update.sh" "$APP_ROOT/update-trigger.sh"
 cp "$REPO"/themes/*.jpg "$REPO"/themes/*.svg "$APP_ROOT/themes/"
 cp "$REPO"/themes/fonts/* "$APP_ROOT/themes/fonts/"
 mkdir -p "$APP_ROOT/themes/themes" && cp "$REPO"/themes/*.jpg "$APP_ROOT/themes/themes/"
-echo "0.6.0-beni" > "$APP_ROOT/version"
+tr -d ' \n' < "$REPO/VERSION" > "$APP_ROOT/version"   # versão deste projeto (Releases vX.Y.Z)
 cp "$REPO/beni/ferramentas/"gerar-temas*.py "$APP_ROOT/themes/"
 
 passo "Comandos em $BIN (atalhos dos apps, sincronização do itch.io etc.)"
@@ -83,12 +85,16 @@ mkdir -p "$HOME/.var/app/org.luanti.luanti/.minetest"
 
 passo "Configuração (só cria se ainda não existir)"
 mkdir -p "$CFG_DIR"; chmod 700 "$CFG_DIR"
+MIGRAR=(python3 "$REPO/beni/ferramentas/migrar-config.py" "$REPO/beni/config/migracoes.json" "$APP_ROOT")
 if [[ ! -f "$CFG_DIR/config.json" ]]; then
   sed "s|{{HOME}}|$HOME|g" "$REPO/beni/config/config.json" > "$CFG_DIR/config.json"
   chmod 600 "$CFG_DIR/config.json"
   echo "  config.json criado com os perfis de exemplo (ajuste nomes/limites em Pais)."
+  "${MIGRAR[@]}" --marcar-todas    # o exemplo já tem todos os jogos/sites atuais
 else
   echo "  config.json já existe — mantido."
+  passo "Mudanças do catálogo (jogos/sites novos ou removidos nesta versão)"
+  "${MIGRAR[@]}"
 fi
 [[ -f "$CFG_DIR/itch-colecoes.json" ]] || cp "$REPO/beni/config/itch-colecoes.json" "$CFG_DIR/"
 echo "firefox" > "$CFG_DIR/browser"
@@ -121,7 +127,6 @@ mkdir -p "$P/chrome"
 cp "$REPO/beni/firefox/userContent.css" "$P/chrome/"
 grep -q legacyUserProfileCustomizations "$P/user.js" || \
   echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$P/user.js"
-sudo install -D -m 0644 "$REPO/beni/firefox/policies.json" /etc/firefox/policies/policies.json
 # Cada criança tem o seu Firefox de sites (external-firefox-profile-<id>, criado no
 # 1º uso, para os logins e cookies não se misturarem): leva as mesmas extensões e ajustes.
 for Q in "$HOME"/.cache/cozy-kids-launcher/external-firefox-profile-*; do
@@ -131,13 +136,6 @@ for Q in "$HOME"/.cache/cozy-kids-launcher/external-firefox-profile-*; do
   cp "$P/chrome/userContent.css" "$Q/chrome/"
   cp "$P/user.js" "$Q/user.js"
 done
-
-passo "DNS com filtro para crianças (CleanBrowsing Family) em qualquer rede"
-# O NetworkManager 1.46 ignora o DNS global quando usa o systemd-resolved; por isso
-# ele para de repassar o DNS do roteador e o resolved usa só o DNS com filtro.
-sudo install -D -m 0644 "$REPO/beni/sistema/dns-familia-resolved.conf" /etc/systemd/resolved.conf.d/dns-familia.conf
-sudo install -D -m 0644 "$REPO/beni/sistema/90-dns-familia.conf" /etc/NetworkManager/conf.d/90-dns-familia.conf
-sudo systemctl restart systemd-resolved NetworkManager || aviso "reinicie o computador para o DNS com filtro valer"
 
 passo "Abrir sozinho no login + sincronizar o itch.io a cada 30 min"
 mkdir -p "$HOME/.config/autostart" "$HOME/.config/systemd/user"
@@ -179,8 +177,13 @@ if command -v xfconf-query >/dev/null && [[ -n "${DISPLAY:-}" ]]; then
   gsettings set apps.light-locker lock-on-suspend false 2>/dev/null || true
   gsettings set apps.light-locker lock-after-screensaver 0 2>/dev/null || true
   gsettings set apps.light-locker late-locking false 2>/dev/null || true
-else
+elif [[ $ATUALIZACAO -eq 0 ]]; then
   aviso "fora de uma sessão XFCE: rode de novo dentro da sessão gráfica para aplicar estes ajustes."
+fi
+
+if [[ $ATUALIZACAO -eq 1 ]]; then
+  echo; echo "Atualização instalada (versão $(cat "$APP_ROOT/version"))."
+  exit 0
 fi
 
 passo "Jogos das coleções do itch.io (precisa de internet)"

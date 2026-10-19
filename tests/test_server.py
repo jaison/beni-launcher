@@ -348,7 +348,7 @@ class UpdateStatusTests(unittest.TestCase):
         with mock.patch.object(server_module, "get_version", return_value="0.3.4"), \
                 mock.patch.object(server_module, "_fetch_remote_json", return_value=release), \
                 mock.patch.object(server_module, "_fetch_remote_text") as legacy_fetch:
-            status = server_module.get_update_status()
+            status = server_module.legacy_update_status()
         self.assertEqual(status["source"], "release")
         self.assertEqual(status["latestVersion"], "0.4.0")
         self.assertTrue(status["updateAvailable"])
@@ -360,7 +360,7 @@ class UpdateStatusTests(unittest.TestCase):
                 mock.patch.object(server_module, "get_version", return_value="0.3.4"), \
                 mock.patch.object(server_module, "_fetch_remote_json", side_effect=OSError("offline")), \
                 mock.patch.object(server_module, "_fetch_remote_text", return_value="0.3.5"):
-            status = server_module.get_update_status()
+            status = server_module.legacy_update_status()
         self.assertEqual(status["source"], "legacy-main")
         self.assertTrue(status["updateAvailable"])
 
@@ -375,7 +375,7 @@ class UpdateStatusTests(unittest.TestCase):
                 mock.patch.object(server_module, "_fetch_remote_json", return_value=incomplete), \
                 mock.patch.object(server_module, "_fetch_remote_text") as legacy_fetch:
             with self.assertRaisesRegex(RuntimeError, "invalid release metadata"):
-                server_module.get_update_status()
+                server_module.legacy_update_status()
         legacy_fetch.assert_not_called()
 
     def test_release_channel_fails_closed_when_release_discovery_breaks(self):
@@ -387,7 +387,7 @@ class UpdateStatusTests(unittest.TestCase):
                     mock.patch.object(server_module, "_fetch_remote_json", side_effect=OSError("offline")), \
                     mock.patch.object(server_module, "_fetch_remote_text") as legacy_fetch:
                 with self.assertRaisesRegex(RuntimeError, "Update check failed"):
-                    server_module.get_update_status()
+                    server_module.legacy_update_status()
             legacy_fetch.assert_not_called()
 
 

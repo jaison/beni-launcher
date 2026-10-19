@@ -1,0 +1,439 @@
+#!/usr/bin/env python3
+"""Atualizador automático do Beni Launcher (roda como root, via systemd).
+
+  beni-atualizar verificar   procura uma Release nova no GitHub e BAIXA
+                             (timer: alguns minutos depois de ligar e de hora em hora)
+  beni-atualizar aplicar     no boot, ANTES do menu abrir: instala o que foi baixado
+
+Notebook que fica sempre ligado: a versão baixada também é instalada "ao vivo",
+com o menu fechando por alguns instantes e voltando sozinho, mas só quando
+nenhum app está aberto, e:
+  - logo, se as notas da Release tiverem a marca [forcar];
+  - senão, de madrugada (JANELA_INICIO..JANELA_FIM, padrão 2h–5h).
+  beni-atualizar estado      mostra o estado (o mesmo JSON que a área dos pais lê)
+
+Só as Releases do repositório configurado contam (tag vX.Y.Z, não rascunho nem
+pré-release); commits no main não chegam aos notebooks. A instalação roda o
+instalar.sh da versão nova como o usuário das crianças (--atualizacao) e a parte
+de sistema como root. Antes, guarda uma cópia do que existe para voltar atrás
+se algo falhar.
+
+Configuração: /etc/beni-launcher/atualizar.conf (USUARIO=, REPO=), escrita pelo
+instalar-sistema.sh. Estado: /var/lib/beni-launcher/estado.json (legível por
+todos; sem nada da família). Log: /var/log/beni-atualizar.log.
+"""
+
+import datetime
+import json
+import os
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+import urllib.error
+import urllib.request
+
+CONF = "/etc/beni-launcher/atualizar.conf"
+STATE_DIR = "/var/lib/beni-launcher"
+STATE = os.path.join(STATE_DIR, "estado.json")
+STAGED = os.path.join(STATE_DIR, "baixada")
+BACKUP = os.path.join(STATE_DIR, "copia-anterior")
+LOG = "/var/log/beni-atualizar.log"
+# cópia da parte de sistema da versão instalada (para tentar de novo os pacotes)
+SYSTEM_SCRIPT = "/usr/local/lib/beni-launcher/instalar-sistema.sh"
+FORCE_MARK = re.compile(r"\[\s*for[cç]ar\s*\]", re.IGNORECASE)
+LAUNCHER_PORT = 38431
+SEMVER = re.compile(r"^v?([0-9]+)\.([0-9]+)\.([0-9]+)$")
+UA = {"User-Agent": "beni-launcher-atualizador", "Accept": "application/vnd.github+json"}
+
+
+def log(msg):
+    line = f"{datetime.datetime.now().isoformat(timespec='seconds')} {msg}"
+    print(line, flush=True)
+    try:
+        with open(LOG, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+    except OSError:
+        pass
+
+
+def read_conf():
+    conf = {"USUARIO": "", "REPO": "jaison/beni-launcher", "JANELA_INICIO": "2", "JANELA_FIM": "5"}
+    try:
+        with open(CONF, encoding="utf-8") as handle:
+            for raw in handle:
+                if "=" in raw and not raw.lstrip().startswith("#"):
+                    key, value = raw.split("=", 1)
+                    conf[key.strip()] = value.strip().strip('"')
+    except OSError:
+        pass
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", conf["REPO"]):
+        raise SystemExit("REPO inválido em " + CONF)
+    return conf
+
+
+def user_info(conf):
+    try:
+        return pwd.getpwnam(conf["USUARIO"])
+    except KeyError:
+        raise SystemExit("USUARIO inválido em " + CONF)
+
+
+def semver(value):
+    match = SEMVER.match(value or "")
+    return tuple(int(x) for x in match.groups()) if match else None
+
+
+def installed_version(user):
+    path = os.path.join(user.pw_dir, ".local/share/cozy-kids-launcher/version")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return handle.read().strip()
+    except OSError:
+        return "0.0.0"
+
+
+def load_state():
+    try:
+        with open(STATE, encoding="utf-8") as handle:
+            data = json.load(handle)
+            return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_state(**changes):
+    os.makedirs(STATE_DIR, exist_ok=True)
+    data = load_state()
+    data.update(changes)
+    tmp = STATE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, ensure_ascii=False, indent=2)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATE)
+    return data
+
+
+def now():
+    return datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def fetch(url, timeout=30):
+    request = urllib.request.Request(url, headers=UA)
+    return urllib.request.urlopen(request, timeout=timeout)
+
+
+def safe_extract(archive, dest):
+    """Extrai o .tar.gz com o filtro "data" (sem caminhos absolutos, '..' nem links para fora)."""
+    with tarfile.open(archive, "r:gz") as tar:
+        tar.extractall(dest, filter="data")
+    tops = [d for d in os.listdir(dest) if os.path.isdir(os.path.join(dest, d))]
+    if len(tops) != 1:
+        raise RuntimeError("pacote com estrutura inesperada")
+    return os.path.join(dest, tops[0])
+
+
+def check_package(root, version):
+    for needed in ("instalar.sh", "VERSION", "src/server.py", "beni/sistema/instalar-sistema.sh"):
+        if not os.path.exists(os.path.join(root, needed)):
+            raise RuntimeError(f"pacote incompleto: falta {needed}")
+    with open(os.path.join(root, "VERSION"), encoding="utf-8") as handle:
+        inside = handle.read().strip()
+    if semver(inside) != semver(version):
+        raise RuntimeError(f"VERSION do pacote ({inside}) não bate com a tag ({version})")
+
+
+# ----------------------------------------------------------------- verificar
+
+def cmd_verificar():
+    conf = read_conf()
+    user = user_info(conf)
+    installed = installed_version(user)
+    save_state(instalada=installed, ultimaVerificacao=now(), repositorio=conf["REPO"])
+    if os.path.exists(os.path.join(STATE_DIR, "pacotes-pendentes")) and os.path.isfile(SYSTEM_SCRIPT):
+        result = subprocess.run(["bash", SYSTEM_SCRIPT, "--so-pacotes", user.pw_name],
+                                cwd=os.path.dirname(SYSTEM_SCRIPT), stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, timeout=3600)
+        log("pacotes pendentes:\n" + result.stdout[-3000:])
+    try:
+        with fetch(f"https://api.github.com/repos/{conf['REPO']}/releases/latest") as resp:
+            release = json.load(resp)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            save_state(erro=None, disponivel=installed)
+            log("verificar: o repositório ainda não tem nenhuma Release publicada")
+        else:
+            save_state(erro=f"GitHub respondeu {exc.code}")
+            log(f"verificar: GitHub respondeu {exc.code}")
+        return 0
+    except Exception as exc:  # noqa: BLE001
+        save_state(erro=f"sem acesso ao GitHub ({type(exc).__name__})")
+        log(f"verificar: sem acesso ao GitHub: {exc}")
+        return 0
+    tag = release.get("tag_name", "")
+    if release.get("draft") or release.get("prerelease") or not semver(tag):
+        save_state(erro=None, disponivel=installed)
+        log(f"verificar: última release ignorada ({tag!r})")
+        return 0
+    latest = tag.lstrip("v")
+    if not semver(installed) or semver(latest) <= semver(installed):
+        save_state(erro=None, disponivel=latest, baixada=None)
+        log(f"verificar: em dia ({installed})")
+        return 0
+    if load_state().get("falhou") == latest:
+        log(f"verificar: {latest} já falhou ao instalar; esperando uma versão mais nova")
+        return 0
+    forced = bool(FORCE_MARK.search(release.get("body") or ""))
+    staged = load_state().get("baixada")
+    if staged == latest and os.path.isfile(os.path.join(STAGED, "pacote.tar.gz")):
+        save_state(forcada=forced)
+        log(f"verificar: {latest} já baixada")
+        return maybe_apply_live(conf, user, forced)
+    os.makedirs(STATE_DIR, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="baixando-", dir=STATE_DIR)
+    try:
+        archive = os.path.join(tmp, "pacote.tar.gz")
+        url = f"https://github.com/{conf['REPO']}/archive/refs/tags/{tag}.tar.gz"
+        with fetch(url, timeout=120) as resp, open(archive, "wb") as out:
+            shutil.copyfileobj(resp, out)
+        root = safe_extract(archive, os.path.join(tmp, "x"))
+        check_package(root, latest)
+        shutil.rmtree(os.path.join(tmp, "x"))
+        with open(os.path.join(tmp, "versao"), "w", encoding="utf-8") as handle:
+            handle.write(latest)
+        notes = (release.get("body") or "").strip()
+        with open(os.path.join(tmp, "notas.md"), "w", encoding="utf-8") as handle:
+            handle.write(notes[:4000])
+        if os.path.isdir(STAGED):
+            shutil.rmtree(STAGED)
+        os.replace(tmp, STAGED)
+        save_state(erro=None, disponivel=latest, baixada=latest, baixadaEm=now(),
+                   notas=notes[:1000], forcada=forced)
+        log(f"verificar: {latest} baixada{' (forçada)' if forced else ''}")
+        return maybe_apply_live(conf, user, forced)
+    except Exception as exc:  # noqa: BLE001
+        shutil.rmtree(tmp, ignore_errors=True)
+        save_state(erro=f"falha ao baixar {latest}: {exc}")
+        log(f"verificar: falha ao baixar {latest}: {exc}")
+    return 0
+
+
+# ------------------------------------------------- instalar com o notebook ligado
+
+def launcher_busy():
+    """True se a criança está com um app/site aberto (ou não deu para saber)."""
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{LAUNCHER_PORT}/api/usage/status", timeout=5) as resp:
+            return bool(json.load(resp).get("active"))
+    except Exception:  # noqa: BLE001
+        return False  # launcher fechado: ninguém usando
+
+
+def in_night_window(conf):
+    try:
+        start, end = int(conf["JANELA_INICIO"]), int(conf["JANELA_FIM"])
+    except ValueError:
+        start, end = 2, 5
+    return start <= datetime.datetime.now().hour < end
+
+
+def launcher_pids(user):
+    pids = []
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        try:
+            if os.stat(f"/proc/{name}").st_uid != user.pw_uid:
+                continue
+            with open(f"/proc/{name}/cmdline", "rb") as handle:
+                args = handle.read().split(b"\0")
+        except OSError:
+            continue
+        line = b" ".join(args)
+        if (b"/.local/bin/cozy-kids-launcher" in line or b"/.local/bin/cozy-iniciar" in line
+                or b"cozy-kids-launcher/server.py" in line
+                or (b"cozy-kids-launcher/firefox-profile" in line and b"-contentproc" not in line)):
+            pids.append(int(name))
+    return pids
+
+
+def stop_launcher(user):
+    # o script do launcher primeiro (senão ele reinicia o servidor sozinho)
+    pids = launcher_pids(user)
+    def first(pid):
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as handle:
+                return 0 if b"bin/cozy" in handle.read() else 1
+        except OSError:
+            return 1
+    pids.sort(key=first)
+    for pid in pids:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+        time.sleep(0.5)
+    deadline = time.time() + 15
+    while launcher_pids(user) and time.time() < deadline:
+        time.sleep(0.5)
+
+
+def session_env(user):
+    return {
+        "HOME": user.pw_dir, "USER": user.pw_name, "LOGNAME": user.pw_name,
+        "PATH": f"{user.pw_dir}/.local/bin:/usr/local/bin:/usr/bin:/bin",
+        "LANG": os.environ.get("LANG", "pt_BR.UTF-8"),
+        "DISPLAY": ":0", "XAUTHORITY": os.path.join(user.pw_dir, ".Xauthority"),
+        "XDG_RUNTIME_DIR": f"/run/user/{user.pw_uid}",
+        "DBUS_SESSION_BUS_ADDRESS": f"unix:path=/run/user/{user.pw_uid}/bus",
+    }
+
+
+def start_launcher(user):
+    launcher = os.path.join(user.pw_dir, ".local/bin/cozy-kids-launcher")
+    if not os.path.exists(f"/run/user/{user.pw_uid}") or not os.path.exists(launcher):
+        return  # sem sessão gráfica: abre sozinho no próximo login
+    subprocess.Popen(["runuser", "-u", user.pw_name, "--", "setsid", launcher],
+                     env=session_env(user), stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def notify(user, text):
+    if shutil.which("zenity") and os.path.exists(f"/run/user/{user.pw_uid}"):
+        subprocess.Popen(["runuser", "-u", user.pw_name, "--", "zenity", "--info", "--no-wrap",
+                          "--timeout=60", "--title=Atualizando", f"--text={text}"],
+                         env=session_env(user), stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def maybe_apply_live(conf, user, forced):
+    if not (forced or in_night_window(conf)):
+        return 0
+    if launcher_busy():
+        log("ao vivo: app aberto; tento de novo na próxima verificação")
+        return 0
+    log(f"ao vivo: instalando agora ({'forçada' if forced else 'madrugada'})")
+    had_launcher = bool(launcher_pids(user))
+    stop_launcher(user)
+    if had_launcher:
+        notify(user, "🔧 Atualizando o computador… volta em um minutinho!")
+    try:
+        cmd_aplicar()
+    finally:
+        if had_launcher:
+            subprocess.run(["pkill", "-u", user.pw_name, "-x", "zenity"], check=False)
+            start_launcher(user)
+    return 0
+
+
+# ------------------------------------------------------------------- aplicar
+
+def as_user(user, args, cwd):
+    env = {
+        "HOME": user.pw_dir, "USER": user.pw_name, "LOGNAME": user.pw_name,
+        "PATH": f"{user.pw_dir}/.local/bin:/usr/local/bin:/usr/bin:/bin",
+        "LANG": os.environ.get("LANG", "pt_BR.UTF-8"),
+        "XDG_RUNTIME_DIR": f"/run/user/{user.pw_uid}",
+    }
+    return subprocess.run(
+        ["runuser", "-u", user.pw_name, "--", *args], cwd=cwd, env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=1800,
+    )
+
+
+USER_PATHS = (".local/share/cozy-kids-launcher", ".local/bin", ".local/lib/cozy-fixes",
+              ".local/share/cozy-jogos", ".config/cozy-kids-launcher")
+
+
+def backup_user(user):
+    if os.path.isdir(BACKUP):
+        shutil.rmtree(BACKUP)
+    os.makedirs(BACKUP)
+    for rel in USER_PATHS:
+        src = os.path.join(user.pw_dir, rel)
+        if os.path.exists(src):
+            dst = os.path.join(BACKUP, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copytree(src, dst, symlinks=True)
+
+
+def restore_user(user):
+    for rel in USER_PATHS:
+        saved = os.path.join(BACKUP, rel)
+        target = os.path.join(user.pw_dir, rel)
+        if os.path.exists(saved):
+            if os.path.exists(target):
+                shutil.rmtree(target)
+            shutil.copytree(saved, target, symlinks=True)
+    subprocess.run(["chown", "-R", f"{user.pw_uid}:{user.pw_gid}"] +
+                   [os.path.join(user.pw_dir, rel) for rel in USER_PATHS
+                    if os.path.exists(os.path.join(user.pw_dir, rel))], check=False)
+
+
+def cmd_aplicar():
+    archive = os.path.join(STAGED, "pacote.tar.gz")
+    if not os.path.isfile(archive):
+        return 0
+    conf = read_conf()
+    user = user_info(conf)
+    with open(os.path.join(STAGED, "versao"), encoding="utf-8") as handle:
+        version = handle.read().strip()
+    previous = installed_version(user)
+    log(f"aplicar: instalando {version} (antes {previous})")
+    work = tempfile.mkdtemp(prefix="instalando-", dir=STATE_DIR)
+    try:
+        root = safe_extract(archive, work)
+        check_package(root, version)
+        os.chmod(work, 0o755)
+        subprocess.run(["chown", "-R", f"{user.pw_uid}:{user.pw_gid}", root], check=True)
+        backup_user(user)
+        # 1) parte do sistema (root): pacotes, políticas do Firefox, DNS, este atualizador
+        result = subprocess.run(
+            ["bash", os.path.join(root, "beni/sistema/instalar-sistema.sh"), "--atualizacao", user.pw_name],
+            cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=1800,
+        )
+        log("sistema:\n" + result.stdout[-4000:])
+        if result.returncode != 0:
+            raise RuntimeError(f"instalar-sistema.sh terminou com {result.returncode}")
+        # 2) parte do usuário: launcher, atalhos, perfis do Firefox, mudanças do catálogo
+        result = as_user(user, ["bash", "./instalar.sh", "--atualizacao"], cwd=root)
+        log("usuario:\n" + result.stdout[-4000:])
+        if result.returncode != 0:
+            raise RuntimeError(f"instalar.sh terminou com {result.returncode}")
+        save_state(instalada=version, anterior=previous, baixada=None, instaladaEm=now(), erro=None)
+        shutil.rmtree(STAGED, ignore_errors=True)
+        log(f"aplicar: {version} instalada")
+    except Exception as exc:  # noqa: BLE001
+        log(f"aplicar: FALHOU ({exc}); voltando para {previous}")
+        try:
+            restore_user(user)
+        except Exception as restore_exc:  # noqa: BLE001
+            log(f"aplicar: falha ao restaurar: {restore_exc}")
+        # não tenta de novo a cada boot: espera uma release mais nova
+        shutil.rmtree(STAGED, ignore_errors=True)
+        save_state(baixada=None, erro=f"a versão {version} falhou ao instalar e foi desfeita: {exc}",
+                   falhou=version)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    return 0
+
+
+def main(argv):
+    if len(argv) != 2 or argv[1] not in ("verificar", "aplicar", "estado"):
+        print(__doc__)
+        return 2
+    if argv[1] == "estado":
+        print(json.dumps(load_state(), ensure_ascii=False, indent=2))
+        return 0
+    if os.geteuid() != 0:
+        print("rode como root (o systemd faz isso sozinho)", file=sys.stderr)
+        return 1
+    return cmd_verificar() if argv[1] == "verificar" else cmd_aplicar()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

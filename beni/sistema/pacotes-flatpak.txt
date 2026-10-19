@@ -1,0 +1,8 @@
+# Apps do Flathub (instalação do sistema). Uma por linha; # comenta.
+org.kde.gcompris
+org.tuxpaint.Tuxpaint
+org.turbowarp.TurboWarp
+org.luanti.luanti
+net.sourceforge.Klavaro
+org.gnome.Klotski
+org.chromium.Chromium

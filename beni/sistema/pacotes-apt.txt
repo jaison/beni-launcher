@@ -1,0 +1,25 @@
+# Pacotes do sistema (apt). Uma por linha; # comenta. Só os que faltam são instalados.
+python3
+python3-tk
+firefox
+wmctrl
+xdotool
+x11-utils
+x11-xserver-utils
+gcc
+flatpak
+network-manager
+librsvg2-bin
+espeak-ng
+speech-dispatcher
+zenity
+tuxmath
+supertuxkart
+supertux
+pingus
+hex-a-hop
+frogatto
+stellarium
+retroarch
+libretro-snes9x
+pcsxr
