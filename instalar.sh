@@ -122,6 +122,15 @@ cp "$REPO/beni/firefox/userContent.css" "$P/chrome/"
 grep -q legacyUserProfileCustomizations "$P/user.js" || \
   echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$P/user.js"
 sudo install -D -m 0644 "$REPO/beni/firefox/policies.json" /etc/firefox/policies/policies.json
+# Cada criança tem o seu Firefox de sites (external-firefox-profile-<id>, criado no
+# 1º uso, para os logins e cookies não se misturarem): leva as mesmas extensões e ajustes.
+for Q in "$HOME"/.cache/cozy-kids-launcher/external-firefox-profile-*; do
+  [[ -d "$Q" ]] || continue
+  mkdir -p "$Q/extensions" "$Q/chrome"
+  cp "$P/extensions/"*.xpi "$Q/extensions/"
+  cp "$P/chrome/userContent.css" "$Q/chrome/"
+  cp "$P/user.js" "$Q/user.js"
+done
 
 passo "DNS com filtro para crianças (CleanBrowsing Family) em qualquer rede"
 # O NetworkManager 1.46 ignora o DNS global quando usa o systemd-resolved; por isso

@@ -1,7 +1,9 @@
 """Tile action normalization and owned application launching."""
 
+import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
@@ -45,7 +47,36 @@ def resolve_tile_action(tile):
     return {"type": "app", "argv": clean} if clean else {"type": "none"}
 
 
-def external_browser_command(browser, url, cache_root):
+EXTERNAL_PROFILE_SEED = ("extensions", "chrome", "user.js")
+
+
+def external_firefox_profile(cache_root, profile_id=""):
+    """Perfil do Firefox dos sites de cada criança (cookies e logins separados).
+
+    O perfil padrão ("default") continua no diretório antigo; os outros nascem
+    com as extensões, o CSS e as preferências do padrão, mas sem cookies/senhas.
+    """
+    base = os.path.join(os.fspath(cache_root), "external-firefox-profile")
+    safe = "".join(ch for ch in (profile_id or "") if ch.isalnum() or ch in "-_")[:64]
+    if not safe or safe == "default":
+        return base
+    path = f"{base}-{safe}"
+    if not os.path.isdir(path):
+        os.makedirs(path, exist_ok=True)
+        for name in EXTERNAL_PROFILE_SEED:
+            source = os.path.join(base, name)
+            target = os.path.join(path, name)
+            try:
+                if os.path.isdir(source):
+                    shutil.copytree(source, target)
+                elif os.path.isfile(source):
+                    shutil.copy2(source, target)
+            except OSError:
+                pass
+    return path
+
+
+def external_browser_command(browser, url, cache_root, profile_id="", marionette_port=None):
     """Build the isolated kiosk command used for an external web tile."""
     cache_root = os.fspath(cache_root)
     if browser_family(browser) == "chromium":
@@ -58,9 +89,26 @@ def external_browser_command(browser, url, cache_root):
             "--kiosk",
             f"--app={url}",
         ]
-    profile = os.path.join(cache_root, "external-firefox-profile")
+    profile = external_firefox_profile(cache_root, profile_id)
     os.makedirs(profile, exist_ok=True)
+    if marionette_port:
+        # login automático (site_logins.py): o Marionette só liga neste tile
+        _set_user_pref(profile, "marionette.port", int(marionette_port))
+        return [browser, "--no-remote", "--profile", profile, "--marionette", "--kiosk", url]
     return [browser, "--no-remote", "--profile", profile, "--kiosk", url]
+
+
+def _set_user_pref(profile, name, value):
+    path = os.path.join(profile, "user.js")
+    line = f'user_pref("{name}", {json.dumps(value)});'
+    try:
+        with open(path, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+    except OSError:
+        lines = []
+    lines = [item for item in lines if f'"{name}"' not in item] + [line]
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
 
 
 def direct_app_command(command):

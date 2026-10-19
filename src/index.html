@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/frontend/styles.css">
 <link rel="stylesheet" href="/frontend/cozy-temas.css">
 <link rel="stylesheet" href="/frontend/usage-limits.css">
+<link rel="stylesheet" href="/frontend/site-logins.css">
 <link rel="stylesheet" href="/frontend/escolha.css">
 </head>
 <body class="theme-rosa">
@@ -249,6 +250,12 @@
                 </label>
               </section>
             </div>
+            <section id="siteLoginPanel" class="schedule-panel site-login-panel" aria-labelledby="siteLoginTitle">
+              <h4 id="siteLoginTitle">🔑 Login automático nos sites</h4>
+              <p class="muted">Ao abrir o site, o launcher entra sozinho com a conta de <strong id="siteLoginProfile"></strong>. A senha fica guardada só neste computador e não aparece de novo depois de salva. Use um e-mail/nome de usuário e senha da própria conta (login pelo Google não funciona aqui).</p>
+              <div id="siteLoginList" class="site-login-list"></div>
+              <div id="siteLoginMessage" class="ui-state" aria-live="polite" hidden></div>
+            </section>
             <section class="profile-create" aria-labelledby="profileCreateTitle">
               <h4 id="profileCreateTitle"></h4>
               <div class="row2">
@@ -513,6 +520,7 @@
 <script defer src="/frontend/profiles.js"></script>
 <script defer src="/frontend/schedule-controls.js"></script>
 <script defer src="/frontend/usage-limits.js"></script>
+<script defer src="/frontend/site-logins.js"></script>
 <script defer src="/frontend/activity-dashboard.js"></script>
 <script defer src="/frontend/parent-settings.js"></script>
 <script defer src="/frontend/first-run.js"></script>

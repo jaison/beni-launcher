@@ -36,6 +36,8 @@ _SAFE_EVENT_FIELDS = {
     "profile.selected": set(),
     "request.rejected": {"statusCode"},
     "server.crashed": {"exceptionType"},
+    "site_login.finished": {"result", "exceptionType"},
+    "site_login.saved": set(),
     "server.duplicate": set(),
     "server.started": {"version"},
     "server.stopped": set(),
@@ -62,7 +64,7 @@ _SAFE_EXCEPTION_TYPES = {
     "URLError",
     "ValueError",
 }
-_SAFE_RESULTS = {"blocked", "failure", "missing", "redirect", "success"}
+_SAFE_RESULTS = {"already", "blocked", "failure", "missing", "redirect", "success"}
 _SAFE_SOURCES = {"legacy-main", "release"}
 _SAFE_LIFECYCLE = STATE_REASONS
 _TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_.+-]{1,80}$")

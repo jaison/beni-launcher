@@ -87,6 +87,7 @@ function activateAdminSection(section,focusHeading=false){
   document.querySelectorAll('[data-admin-panel]').forEach(panel=>{
     panel.hidden=panel.dataset.adminPanel!==section;
   });
+  if(section==='children'&&typeof loadSiteLogins==='function') loadSiteLogins();
   const activePanel=document.querySelector('[data-admin-panel="'+section+'"]');
   if(changed) playAdminPanelTransition(activePanel);
   if(focusHeading){

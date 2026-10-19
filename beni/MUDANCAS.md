@@ -14,6 +14,7 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 | `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. Uma categoria pode dividir o limite de outra (`"pool": "jogos"`): o **Passatempo** gasta dos mesmos minutos dos Jogos. Opcional: limite diferente em cada dia da semana (`categoryLimits.weekdays.{mon..sun}`; campo ausente = usa o padrão, `null` = sem limite). |
 | `frontend/usage-limits.js` / `.css` | Medidores na barra de baixo, mensagens de "tempo acabou" e painel em Pais → Tempo de tela (com a tabela Seg–Dom de "Tempo diferente em cada dia da semana"). |
 | `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Passatempo / Jogar" e lista filtrada por categoria (o Passatempo só aparece se o perfil tiver essa categoria). |
+| `site_logins.py`, `frontend/site-logins.js` / `.css` | Login automático nos sites (Khan Academy) por perfil. Pais → Crianças → "🔑 Login automático nos sites" grava e-mail/usuário e senha em `~/.config/cozy-kids-launcher/site-logins.json` (600, fora do config.json; a senha nunca volta para a página). Ao abrir o Khan, o Firefox sobe com o Marionette (controle remoto do próprio Firefox, porta 28290, só nesse tile) e uma thread preenche o login e clica em Entrar; se já estiver logado, não digita nada. Endpoints `GET`/`POST /api/site-logins` (só pais). |
 | `frontend/cozy-temas.css` | Temas heroi, blocos, ninja, gelo, casinha e castelo; estilos da prévia; capas de jogos nos tiles. |
 | `frontend/locales/pt.json` | Português do Brasil (todas as 237 chaves do inglês). |
 | `sites/phet.html` | Pré-tela do tile "Ciências (PhET)": Física, Matemática, Química, Terra e Espaço e Biologia. Cada uma abre o PhET já filtrado no Ensino Fundamental 1 (para mudar o nível, troque `NIVEL` no arquivo). Servida pelo próprio launcher em `http://127.0.0.1:38431/sites/phet.html`. |
@@ -25,6 +26,8 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 | `server.py` | Junta os bloqueios por horário com os bloqueios por limite (motivos `category_limit` e `daily_limit`, campo `limitBlocked`); endpoints `GET /api/usage/status` e `POST /api/usage/reset`; liga o contador ao abrir um tile; idioma `pt`. |
 | `config_validation.py`, `profile_config.py` | Aceitam `tile.category`, `profile.categoryLimits`, `profile.choiceScreenEnabled` e o idioma `pt`. |
 | `overlay.py` | Barra redonda e meio transparente (fica opaca com o mouse em cima) com ✕, tempo restante e ✥ para mudar de canto (toque = próximo canto; arrastar = gruda no canto mais perto; lembra o canto de cada app). Em sites, botão "‹ Voltar" separado no canto inferior esquerdo. Ao fechar, o launcher só fica "por cima" por um instante (antes ficava preso assim e o próximo app abria escondido atrás dele). Tempo restante da categoria (com cores), contagem grande nos últimos 10 s, fechamento no 0; reposiciona a janela via X11 quando o jogo a joga para 0,0; textos em pt. |
+| `application_launcher.py` | Firefox dos sites separado por criança (`external-firefox-profile` para o perfil padrão, `external-firefox-profile-<id>` para os outros, criado com as extensões e ajustes mas sem cookies/senhas); `--marionette` só quando há login automático. |
+| `runtime_diagnostics.py` | Eventos `site_login.saved` e `site_login.finished` (só o resultado, nunca e-mail/senha). |
 | `timer_watchdog.py`, `browser.html`, `media.html`, `no-media.html` | Textos em pt. O `browser.html` tinha um erro de JS de origem (`'Time's up!'`), corrigido com a tradução. |
 | `speech_feedback.py` | Voz em português (`spd-say -l pt-BR` / `espeak-ng -v pt-br`). |
 | `recommendations.json` | Campos `label_pt`, `name_pt`, `desc_pt`, `hint_pt`. |
@@ -38,8 +41,9 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 | `index.html` | Textos em pt; links dos CSS/JS novos; botão Voltar e selo de tempo; quadros "Limite diário por categoria" e "Tela inicial". |
 
 ## `scripts/` e `tests/`
-- `scripts/install.sh`: também copia `usage_limits.py`, `pt.json` e os CSS/JS novos.
+- `scripts/install.sh`: também copia `usage_limits.py`, `site_logins.py`, `sites/phet.html`, `pt.json` e os CSS/JS novos.
 - `tests/test_server.py`: 2 asserções ajustadas (texto já traduzido; campo `limitBlocked`).
+- `tests/test_site_logins.py` (novo): login dos sites e perfis do Firefox por criança.
 - `tests/test_usage_limits.py` (novo): limites por dia da semana.
 - `tests/test_overlay.py` passa sem mudança. O `overlay.py` só pede `XMoveWindow` ao X11 quando vai usar.
 

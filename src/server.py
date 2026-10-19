@@ -10,8 +10,10 @@ import threading
 import time
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
+import site_logins
 from app_detection import (
     BROWSER_CANDIDATES,
+    browser_family,
     browser_statuses,
     find_browser as detect_browser,
     parse_desktop_file,
@@ -151,6 +153,8 @@ LEGACY_RAW_URL = os.environ.get(
 ).rstrip("/")
 LEGACY_VERSION_URL = f"{LEGACY_RAW_URL}/VERSION"
 CFG = os.path.join(HOME, ".config", "cozy-kids-launcher", "config.json")
+# e-mail/senha dos sites por perfil (site_logins.py); nunca vai para a página
+SITE_LOGINS_FILE = os.path.join(HOME, ".config", "cozy-kids-launcher", "site-logins.json")
 BACKUP_ROOT = os.path.join(HOME, ".local", "share", "cozy-kids-launcher-backups")
 LOG_FILE = os.path.join(HOME, ".local", "state", "cozy-kids-launcher", "runtime.jsonl")
 ACTIVITY_FILE = os.path.join(HOME, ".local", "state", "cozy-kids-launcher", "activity.json")
@@ -542,9 +546,20 @@ def find_browser(config=None):
     )
 
 
-def external_browser_command(browser, url):
+def external_browser_command(browser, url, profile_id="", marionette_port=None):
     cache_root = os.path.join(HOME, ".cache", "cozy-kids-launcher")
-    return build_external_browser_command(browser, url, cache_root)
+    return build_external_browser_command(
+        browser, url, cache_root, profile_id=profile_id, marionette_port=marionette_port,
+    )
+
+
+def site_login_for_launch(browser, url, profile_id):
+    """Login salvo para o site deste tile (só no Firefox), ou None."""
+    site = site_logins.site_for_url(url)
+    if not site or not browser or browser_family(browser) != "firefox":
+        return None
+    login = site_logins.get_login(SITE_LOGINS_FILE, profile_id, site)
+    return (site, login) if login else None
 
 
 def application_launcher():
@@ -957,6 +972,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not self.require_admin(data):
                 return
             return self.json_response({"backups": available_config_backups()})
+        if request_url.path == "/api/site-logins":
+            data = load_stored_cfg()
+            if not self.require_admin(active_config(data)):
+                return
+            profile_id = data.get("activeProfileId", "")
+            return self.json_response({
+                "profileId": profile_id,
+                "sites": site_logins.public_logins(SITE_LOGINS_FILE, profile_id),
+            })
         if self.path == "/api/export-config":
             data = load_stored_cfg()
             if not self.require_admin(active_config(data)):
@@ -1427,6 +1451,34 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "safetyBackupId": safety_backup["id"],
             })
             return
+        if action == "api/site-logins":
+            data = load_stored_cfg()
+            if not self.require_admin(active_config(data)):
+                return
+            body = self.read_json_body()
+            if body is None:
+                return
+            profile_id = data.get("activeProfileId", "")
+            try:
+                if set(body).difference(("site", "username", "password", "remove")):
+                    raise ValueError("unsupported fields")
+                site_logins.update_login(
+                    SITE_LOGINS_FILE,
+                    profile_id,
+                    body.get("site"),
+                    username=body.get("username"),
+                    password=body.get("password") or None,
+                    remove=body.get("remove") is True,
+                )
+            except ValueError as exc:
+                self.json_response({"status": "error", "message": str(exc)}, 400)
+                return
+            log_runtime_event("site_login.saved")
+            self.json_response({
+                "status": "ok",
+                "sites": site_logins.public_logins(SITE_LOGINS_FILE, profile_id),
+            })
+            return
         if action == "shutdown":
             if not self.require_admin():
                 return
@@ -1659,8 +1711,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     return
                 browser = find_browser(cfg)
                 command = None
+                profile_id = cfg.get("activeProfileId", "")
+                auto_login = site_login_for_launch(browser, url, profile_id)
                 if browser:
-                    command = external_browser_command(browser, url)
+                    command = external_browser_command(
+                        browser, url, profile_id=profile_id,
+                        marionette_port=site_logins.MARIONETTE_PORT if auto_login else None,
+                    )
                 elif shutil.which("xdg-open"):
                     command = ["xdg-open", url]
                 else:
@@ -1694,6 +1751,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         503,
                     )
                     return
+                if auto_login and command and "--marionette" in command:
+                    site, login = auto_login
+                    site_logins.start_auto_login(
+                        site, login["username"], login["password"], url, log=log_runtime_event,
+                    )
                 self.send_response(204)
                 self.end_headers()
                 return
