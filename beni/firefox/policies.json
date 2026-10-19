@@ -9,6 +9,20 @@
         "*://www.bestschoolgames.com/*",
         "*://bestschoolgames.com/*"
       ]
+    },
+    "3rdparty": {
+      "Extensions": {
+        "uBlock0@raymondhill.net": {
+          "toOverwrite": {
+            "filters": [
+              "! Escola Games: os jogos so rodam sem anuncio quando o script do Google FALHA (onerror).",
+              "! O uBlock troca o script por um falso que nunca responde; aqui ele so bloqueia.",
+              "@@||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$redirect-rule,domain=assets.escolagames.com.br",
+              "||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$script,domain=assets.escolagames.com.br"
+            ]
+          }
+        }
+      }
     }
   }
 }

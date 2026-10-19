@@ -72,4 +72,5 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 - Firefox do launcher: `accessibility.browsewithcaret` desligado (era a linha vertical piscando).
 - Firefox dos sites (Escola Games etc.): bloqueador de anúncios **uBlock Origin** (`beni/firefox/`), instalado só nesse perfil.
 - Escola Games: o menu "Jogos" (`/jogos-divertidos`, `/diversao/…`) e "Jogos em inglês" ficam escondidos (`beni/firefox/userContent.css`) e bloqueados (`/etc/firefox/policies/policies.json`). Os jogos educativos (`/jogos/…`) continuam.
+- Escola Games com bloqueador: os jogos só abrem sem anúncio quando o script do Google **falha** ao carregar (o site tem essa saída). O uBlock trocava o script por um falso, e o jogo ficava em "Loading…" para sempre. A política em `beni/firefox/policies.json` manda o uBlock só bloquear esse script nos jogos (`assets.escolagames.com.br`).
 - Autostart `~/.config/autostart/cozy-kids-launcher-autostart.desktop` → `cozy-iniciar`.
