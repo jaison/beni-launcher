@@ -1,4 +1,4 @@
-// Limites diários por categoria (Jogos / Aprender): medidores para a criança,
+// Limites diários por categoria (Jogos / Aprender / Passatempo): medidores para a criança,
 // mensagem amigável quando o tempo acaba e configuração no painel dos pais.
 let usageStatus=null, usagePollInterval=null, usageLastExpiryShown=0, usageMessageTimer=null;
 try{ usageLastExpiryShown=Number(sessionStorage.getItem('cozyUsageExpiryShown'))||0; }catch(e){}
@@ -19,9 +19,26 @@ function usageBand(available,limitSeconds){
 function usageCategory(id){
   return usageStatus&&Array.isArray(usageStatus.categories)?usageStatus.categories.find(c=>c.id===id):null;
 }
+// Categorias que dividem o mesmo limite (ex.: Jogos + Passatempo) viram um grupo.
+function usageGroups(){
+  const groups=[], byPool={};
+  for(const c of (usageStatus&&usageStatus.categories)||[]){
+    const pool=c.pool||c.id;
+    let g=byPool[pool];
+    if(!g){ g=byPool[pool]={pool,members:[],minutes:c.minutes,used:0,available:c.availableSeconds,exhausted:c.exhausted}; groups.push(g); }
+    g.members.push(c);
+    g.used=c.poolUsedSeconds!==undefined?c.poolUsedSeconds:g.used+(c.usedSeconds||0);
+  }
+  for(const g of groups){
+    g.label=g.members.map(c=>c.label).join(' + ');
+    g.emoji=g.members.map(c=>c.emoji).join('');
+  }
+  return groups;
+}
 function usageAlternativesText(excludeId){
   if(!usageStatus||usageStatus.totalExhausted) return '';
-  const options=(usageStatus.categories||[]).filter(c=>c.id!==excludeId&&!c.exhausted&&(c.availableSeconds===null||c.availableSeconds>0));
+  const own=usageCategory(excludeId), ownPool=own?(own.pool||own.id):excludeId;
+  const options=(usageStatus.categories||[]).filter(c=>c.id!==excludeId&&(c.pool||c.id)!==ownPool&&!c.exhausted&&(c.availableSeconds===null||c.availableSeconds>0));
   if(!options.length) return '';
   return 'Você ainda pode brincar de '+options.map(c=>c.label+' '+c.emoji+(c.availableSeconds!==null?' ('+usageMinutes(c.availableSeconds)+' min)':'')).join(' ou ')+'.';
 }
@@ -33,11 +50,12 @@ function renderUsageMeters(){
   host.replaceChildren();
   if(!usageStatus||!usageStatus.enabled){ host.hidden=true; return; }
   const items=[];
-  for(const c of usageStatus.categories||[]){
-    if(c.minutes===null||c.minutes===undefined) continue;
-    items.push({emoji:c.emoji,label:c.label,used:c.usedSeconds,limit:c.minutes*60,available:c.availableSeconds,exhausted:c.exhausted});
+  const groups=usageGroups();
+  for(const g of groups){
+    if(g.minutes===null||g.minutes===undefined) continue;
+    items.push({emoji:g.emoji,label:g.label,used:g.used,limit:g.minutes*60,available:g.available,exhausted:g.exhausted});
   }
-  const sum=(usageStatus.categories||[]).reduce((acc,c)=>acc+(c.minutes===null||c.minutes===undefined?Infinity:c.minutes),0);
+  const sum=groups.reduce((acc,g)=>acc+(g.minutes===null||g.minutes===undefined?Infinity:g.minutes),0);
   if(usageStatus.totalMinutes!==null&&usageStatus.totalMinutes!==undefined&&(usageStatus.totalMinutes<sum||!items.length)){
     items.push({emoji:'⏳',label:'Hoje',used:usageStatus.totalUsedSeconds,limit:usageStatus.totalMinutes*60,available:usageStatus.totalRemainingSeconds,exhausted:usageStatus.totalExhausted});
   }
@@ -147,10 +165,10 @@ function showUsageLimitBlock(reason,tileId){
 }
 
 // ---------- Painel dos pais (Screen Time) ----------
-const USAGE_DEFAULT_CATEGORIES={jogos:{label:'Jogos',emoji:'🎮'},educativo:{label:'Aprender',emoji:'📚'}};
+const USAGE_DEFAULT_CATEGORIES={jogos:{label:'Jogos',emoji:'🎮'},educativo:{label:'Aprender',emoji:'📚'},passatempo:{label:'Passatempo',emoji:'🎨'}};
 function ensureCategoryLimits(){
   if(!cfg.categoryLimits||typeof cfg.categoryLimits!=='object'){
-    cfg.categoryLimits={enabled:false,totalMinutes:60,categories:{jogos:{minutes:30},educativo:{minutes:30}}};
+    cfg.categoryLimits={enabled:false,totalMinutes:60,categories:{jogos:{minutes:30},educativo:{minutes:30},passatempo:{minutes:null,pool:'jogos'}}};
   }
   if(!cfg.categoryLimits.categories||typeof cfg.categoryLimits.categories!=='object') cfg.categoryLimits.categories={};
   return cfg.categoryLimits;
@@ -201,7 +219,7 @@ function usageWeekdayTable(limits){
     head.appendChild(th);
   }
   const body=table.createTBody();
-  const rows=[{id:'',label:'⏳ Total do dia'}].concat(Object.keys(limits.categories).map(id=>{
+  const rows=[{id:'',label:'⏳ Total do dia'}].concat(Object.keys(limits.categories).filter(id=>!usagePooled(limits,id)).map(id=>{
     const d=categoryDisplay(id); return {id,label:d.emoji+' '+d.label};
   }));
   for(const rowDef of rows){
@@ -232,6 +250,10 @@ function usageWeekdayTable(limits){
   wrap.appendChild(copy);
   return wrap;
 }
+function usagePooled(limits,id){
+  const pool=(limits.categories[id]||{}).pool;
+  return !!pool&&pool!==id&&!!limits.categories[pool];
+}
 function renderUsageLimitSettings(){
   const panel=document.getElementById('usageLimitSettings');
   if(!panel||!cfg) return;
@@ -257,8 +279,26 @@ function renderUsageLimitSettings(){
     addRow('⏳ Total do dia',minutesInput(limits.totalMinutes,'Total do dia em minutos',v=>{ limits.totalMinutes=v; }));
     for(const id of Object.keys(limits.categories)){
       const d=categoryDisplay(id);
+      if(usagePooled(limits,id)) continue;
       addRow(d.emoji+' '+d.label,minutesInput(limits.categories[id].minutes,d.label+' em minutos',v=>{ limits.categories[id].minutes=v; }));
     }
+  }
+  // Categorias que podem dividir o tempo dos Jogos (ex.: Passatempo)
+  for(const id of Object.keys(limits.categories)){
+    if(id==='jogos'||!limits.categories.jogos) continue;
+    if(id!=='passatempo'&&!limits.categories[id].pool) continue;
+    const d=categoryDisplay(id), j=categoryDisplay('jogos');
+    const share=document.createElement('label');
+    share.className='chk usage-pool-toggle';
+    const check=document.createElement('input');
+    check.type='checkbox'; check.checked=usagePooled(limits,id);
+    check.onchange=()=>{
+      if(check.checked){ limits.categories[id].pool='jogos'; limits.categories[id].minutes=null; }
+      else{ delete limits.categories[id].pool; limits.categories[id].minutes=limits.categories.jogos.minutes??30; }
+      renderUsageLimitSettings();
+    };
+    share.append(check,document.createTextNode(' '+d.emoji+' '+d.label+' divide o tempo com '+j.emoji+' '+j.label));
+    fields.appendChild(share);
   }
   // Dias da semana
   const dayToggle=document.createElement('label');
@@ -326,7 +366,7 @@ function renderUsageLimitSettingsStatus(){
   const target=document.getElementById('usageTodayStatus');
   if(!target) return;
   if(!usageStatus||!usageStatus.enabled){ target.textContent='Limites desativados (ou ainda não salvos) para este perfil.'; return; }
-  const parts=(usageStatus.categories||[]).map(c=>c.emoji+' '+c.label+': '+usageUsedMinutes(c.usedSeconds)+(c.minutes!==null&&c.minutes!==undefined?'/'+c.minutes:'')+' min');
+  const parts=usageGroups().map(g=>g.emoji+' '+g.label+': '+usageUsedMinutes(g.used)+(g.minutes!==null&&g.minutes!==undefined?'/'+g.minutes:'')+' min');
   parts.push('⏳ Total: '+usageUsedMinutes(usageStatus.totalUsedSeconds)+(usageStatus.totalMinutes!==null&&usageStatus.totalMinutes!==undefined?'/'+usageStatus.totalMinutes:'')+' min');
   target.textContent='Hoje: '+parts.join(' · ');
 }

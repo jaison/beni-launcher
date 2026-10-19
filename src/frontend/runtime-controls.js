@@ -382,8 +382,8 @@ function updateTileFocus(moveFocus=true){
 }
 function focusTileByDir(dir){
   const naEscolha=typeof escolhaNaTela==='function'&&escolhaNaTela();
-  const tiles=naEscolha?ESCOLHA_OPCOES:tilesForPage(cfg.currentPage);
-  const cols=naEscolha?ESCOLHA_OPCOES.length:(cfg.layoutMode==='klein'?3:2);
+  const tiles=naEscolha?escolhaOpcoes():tilesForPage(cfg.currentPage);
+  const cols=naEscolha?tiles.length:(cfg.layoutMode==='klein'?3:2);
   if(dir==='right'){
     if((focusedTileIndex+1)%cols!==0&&focusedTileIndex+1<tiles.length) focusedTileIndex++;
   }else if(dir==='left'){

@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from usage_limits import (  # noqa: E402
     compute_status,
+    default_category_for_tile,
     limits_for_day,
     validate_category_limits,
     weekday_key,
@@ -69,6 +70,62 @@ class WeekdayLimitsTest(unittest.TestCase):
         self.assertEqual(jogos["minutes"], 120)
         self.assertEqual(jogos["availableSeconds"], 80 * 60)
         self.assertTrue(saturday["weekdayLimits"])
+
+
+POOLED = {
+    "enabled": True,
+    "totalMinutes": 60,
+    "categories": {
+        "jogos": {"minutes": 30},
+        "educativo": {"minutes": 30},
+        "passatempo": {"minutes": None, "pool": "jogos"},
+    },
+}
+
+
+class PooledCategoryTest(unittest.TestCase):
+    profile = {
+        "categoryLimits": POOLED,
+        "tiles": [
+            {"id": "luanti", "category": "jogos"},
+            {"id": "paint", "category": "passatempo"},
+            {"id": "khan", "category": "educativo"},
+        ],
+    }
+
+    def test_validation_keeps_pool(self):
+        clean = validate_category_limits(POOLED)
+        self.assertEqual(clean["categories"]["passatempo"]["pool"], "jogos")
+
+    def test_validation_drops_bad_pool(self):
+        bad = {**POOLED, "categories": {**POOLED["categories"], "passatempo": {"minutes": 5, "pool": "nada"}}}
+        clean = validate_category_limits(bad)
+        self.assertNotIn("pool", clean["categories"]["passatempo"])
+
+    def test_pool_shares_time(self):
+        usage = {"totalSeconds": 20 * 60, "categories": {"jogos": 10 * 60, "passatempo": 10 * 60}}
+        status = compute_status(self.profile, usage, now=at(2026, 10, 19))
+        cats = {c["id"]: c for c in status["categories"]}
+        self.assertEqual(cats["jogos"]["availableSeconds"], 10 * 60)
+        self.assertEqual(cats["passatempo"]["availableSeconds"], 10 * 60)
+        self.assertEqual(cats["passatempo"]["minutes"], 30)
+        self.assertEqual(cats["educativo"]["availableSeconds"], 30 * 60)
+
+    def test_pool_exhausted_blocks_both(self):
+        usage = {"totalSeconds": 30 * 60, "categories": {"jogos": 5 * 60, "passatempo": 25 * 60}}
+        status = compute_status(self.profile, usage, now=at(2026, 10, 19))
+        self.assertIn("luanti", status["blockedTileIds"])
+        self.assertIn("paint", status["blockedTileIds"])
+        self.assertNotIn("khan", status["blockedTileIds"])
+
+    def test_alternatives_skip_same_pool(self):
+        usage = {"totalSeconds": 0, "categories": {}}
+        status = compute_status(self.profile, usage, {"tileId": "paint", "category": "passatempo"}, now=at(2026, 10, 19))
+        self.assertEqual([a["id"] for a in status["active"]["alternatives"]], ["educativo"])
+
+    def test_default_category(self):
+        self.assertEqual(default_category_for_tile({"id": "colorir"}), "passatempo")
+        self.assertEqual(default_category_for_tile({"id": "khan"}), "educativo")
 
 
 if __name__ == "__main__":

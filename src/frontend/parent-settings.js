@@ -125,8 +125,9 @@ function renderAdminSections(){
     : uiText.timerOff;
   if(cfg.categoryLimits&&cfg.categoryLimits.enabled){
     const lim=cfg.categoryLimits, cats=lim.categories||{};
-    const parts=Object.keys(cats).filter(id=>cats[id].minutes!==null&&cats[id].minutes!==undefined)
-      .map(id=>(id==='jogos'?'🎮':id==='educativo'?'📚':'⭐')+' '+cats[id].minutes);
+    const icon=id=>id==='jogos'?'🎮':id==='educativo'?'📚':id==='passatempo'?'🎨':'⭐';
+    const parts=Object.keys(cats).filter(id=>!cats[id].pool&&cats[id].minutes!==null&&cats[id].minutes!==undefined)
+      .map(id=>icon(id)+Object.keys(cats).filter(o=>cats[o].pool===id).map(icon).join('')+' '+cats[id].minutes);
     document.getElementById('overviewTimerValue').textContent=
       (lim.totalMinutes!==null&&lim.totalMinutes!==undefined?lim.totalMinutes+' min/dia':'Limite diário')+(parts.length?' ('+parts.join(' · ')+')':'');
     if(lim.weekdays&&Object.keys(lim.weekdays).length) document.getElementById('overviewTimerValue').textContent='Limite por dia da semana';

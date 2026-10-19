@@ -1,4 +1,4 @@
-/* Tela de escolha "O que você quer fazer?" (📚 Aprender / 🎮 Jogar) e barra da lista filtrada.
+/* Tela de escolha "O que você quer fazer?" (📚 Aprender / 🎨 Passatempo / 🎮 Jogar) e barra da lista filtrada.
    Os botões usam a classe .tile e a barra usa .smallbtn para herdar cores, bordas,
    fontes e enfeites de cada tema; aqui só ficam tamanhos e o estado bloqueado. */
 
@@ -9,6 +9,12 @@
   gap:18px 48px; min-height:0;
   width:min(1000px,100%); margin:0 auto;
 }
+/* Três opções (Aprender / Passatempo / Jogar): botões mais estreitos */
+#grid.escolha-grid.escolha-n3 {
+  grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px 32px; width:min(1240px,100%);
+}
+#grid.escolha-n3 .tile.escolha-btn { font-size:clamp(1.8rem,3.4vw,2.8rem); padding:20px 18px 24px; }
+#grid.escolha-n3 .escolha-btn .escolha-emoji { font-size:6.2rem; }
 #grid h1.escolha-pergunta {
   grid-column:1 / -1; margin:0; min-height:0; text-align:center; line-height:1.15;
   font-size:clamp(1.8rem,3.6vw,2.7rem); transform:none;
@@ -79,6 +85,7 @@ body.escolha-ativa #usageMeters { display:none; }
 @media (max-width:900px), (max-height:700px) {
   #grid.escolha-grid { grid-template-rows:auto minmax(200px,calc(100vh - 250px)); gap:12px 24px; }
   #grid .escolha-btn .escolha-emoji { font-size:5rem; }
+  #grid.escolha-n3 .escolha-btn .escolha-emoji { font-size:4.2rem; }
   .titlewrap .escolha-voltar, .titlewrap .escolha-chip { min-height:52px; bottom:0; }
   .titlewrap .escolha-voltar { font-size:1.15rem; padding:0 16px; }
   .escolha-chip .escolha-chip-corpo { min-width:80px; }

@@ -11,9 +11,9 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 ## Arquivos novos (`src/`)
 | Arquivo | Para quê |
 |---|---|
-| `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. Opcional: limite diferente em cada dia da semana (`categoryLimits.weekdays.{mon..sun}`; campo ausente = usa o padrão, `null` = sem limite). |
+| `usage_limits.py` | Limite diário por perfil e por categoria (`jogos`, `educativo`, …). Conta o tempo só com o app aberto, grava em `~/.local/state/cozy-kids-launcher/usage-today.json`, zera à meia-noite, bloqueia tiles e fecha o app que passar do limite. Uma categoria pode dividir o limite de outra (`"pool": "jogos"`): o **Passatempo** gasta dos mesmos minutos dos Jogos. Opcional: limite diferente em cada dia da semana (`categoryLimits.weekdays.{mon..sun}`; campo ausente = usa o padrão, `null` = sem limite). |
 | `frontend/usage-limits.js` / `.css` | Medidores na barra de baixo, mensagens de "tempo acabou" e painel em Pais → Tempo de tela (com a tabela Seg–Dom de "Tempo diferente em cada dia da semana"). |
-| `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Jogar" e lista filtrada por categoria. |
+| `frontend/escolha.js` / `.css` | Tela inicial "O que você quer fazer? Aprender / Passatempo / Jogar" e lista filtrada por categoria (o Passatempo só aparece se o perfil tiver essa categoria). |
 | `frontend/cozy-temas.css` | Temas heroi, blocos, ninja, gelo, casinha e castelo; estilos da prévia; capas de jogos nos tiles. |
 | `frontend/locales/pt.json` | Português do Brasil (todas as 237 chaves do inglês). |
 | `sites/phet.html` | Pré-tela do tile "Ciências (PhET)": Física, Matemática, Química, Terra e Espaço e Biologia. Cada uma abre o PhET já filtrado no Ensino Fundamental 1 (para mudar o nível, troque `NIVEL` no arquivo). Servida pelo próprio launcher em `http://127.0.0.1:38431/sites/phet.html`. |

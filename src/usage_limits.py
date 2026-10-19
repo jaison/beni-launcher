@@ -1,5 +1,8 @@
 """Limites diários de uso por categoria (ex.: Jogos 30 min + Aprender 30 min).
 
+Uma categoria pode dividir o limite de outra ("pool": "jogos"): o Passatempo,
+por exemplo, gasta dos mesmos 30 min dos Jogos.
+
 O tempo só conta enquanto um app/site lançado pelo launcher está aberto.
 O uso acumula por dia (data local; zera à meia-noite) e por perfil, e fica
 persistido em ~/.local/state/cozy-kids-launcher/usage-today.json para
@@ -29,6 +32,7 @@ ENFORCE_GRACE_SECONDS = 3
 BUILTIN_CATEGORIES = {
     "jogos": {"label": "Jogos", "emoji": "🎮"},
     "educativo": {"label": "Aprender", "emoji": "📚"},
+    "passatempo": {"label": "Passatempo", "emoji": "🎨"},
 }
 
 DEFAULT_CATEGORY_LIMITS = {
@@ -37,13 +41,16 @@ DEFAULT_CATEGORY_LIMITS = {
     "categories": {
         "jogos": {"minutes": 30},
         "educativo": {"minutes": 30},
+        "passatempo": {"minutes": None, "pool": "jogos"},
     },
 }
 
 _EDUCATIVO_IDS = {
-    "paint", "games", "scratch", "blockly", "klavaro", "codeorg", "khan",
-    "phet", "musiclab", "stellarium", "browser", "klotski", "hexahop",
-    "pingus", "tuxmath",
+    "scratch", "blockly", "klavaro", "codeorg", "khan",
+    "phet", "stellarium", "browser", "tuxmath",
+}
+_PASSATEMPO_IDS = {
+    "paint", "autodraw", "colorir", "games", "musiclab", "klotski", "hexahop", "pingus",
 }
 _JOGOS_IDS = {
     "luanti", "supertux", "supertuxkart", "snes", "ps1", "frogatto",
@@ -63,6 +70,8 @@ def default_category_for_tile(tile):
     first = os.path.basename(command[0]) if command and isinstance(command[0], str) else ""
     if tile_id in _EDUCATIVO_IDS:
         return "educativo"
+    if tile_id in _PASSATEMPO_IDS:
+        return "passatempo"
     if (
         tile_id in _JOGOS_IDS
         or tile_id.startswith("rb-")
@@ -174,7 +183,7 @@ def validate_category_limits(value, field="categoryLimits"):
             entry = {"minutes": entry}
         if not isinstance(entry, dict):
             raise ValueError(f"{field}.categories.{category_id} must be an object")
-        extra = set(entry).difference(("minutes", "label", "emoji"))
+        extra = set(entry).difference(("minutes", "label", "emoji", "pool"))
         if extra:
             raise ValueError(f"{field}.categories.{category_id} has unsupported fields")
         item = {"minutes": _minutes(entry.get("minutes"), f"{field}.categories.{category_id}.minutes")}
@@ -184,7 +193,17 @@ def validate_category_limits(value, field="categoryLimits"):
                 if not isinstance(text, str) or len(text) > maximum:
                     raise ValueError(f"{field}.categories.{category_id}.{key} is invalid")
                 item[key] = text
+        if entry.get("pool") not in (None, "", category_id):
+            pool = entry["pool"]
+            if not isinstance(pool, str) or not CATEGORY_ID_PATTERN.fullmatch(pool):
+                raise ValueError(f"{field}.categories.{category_id}.pool is invalid")
+            item["pool"] = pool
         clean[category_id] = item
+    # o pool tem que apontar para uma categoria que existe e que não divide com outra
+    for category_id, item in clean.items():
+        pool = item.get("pool")
+        if pool and (pool not in clean or clean[pool].get("pool")):
+            del item["pool"]
     result = {"enabled": enabled, "totalMinutes": total, "categories": clean}
     if value.get("weekdays"):
         result["weekdays"] = _validate_weekdays(value["weekdays"], clean, f"{field}.weekdays")
@@ -254,18 +273,39 @@ def save_usage(path, data):
 
 # ------------------------------------------------------------------ cálculo
 
+def category_pool(limits, category_id):
+    """Categoria dona do limite: a própria ou a indicada em "pool"."""
+    categories = (limits or {}).get("categories", {})
+    pool = (categories.get(category_id) or {}).get("pool")
+    return pool if pool in categories else category_id
+
+
 def category_definitions(limits):
-    """Lista ordenada de categorias configuradas, com nome e emoji."""
+    """Lista ordenada de categorias configuradas, com nome, emoji e pool.
+
+    "minutes" é o limite que vale para a categoria (o do pool, se dividir).
+    """
     result = []
-    for category_id, entry in (limits or {}).get("categories", {}).items():
+    categories = (limits or {}).get("categories", {})
+    for category_id, entry in categories.items():
         builtin = BUILTIN_CATEGORIES.get(category_id, {})
+        pool = category_pool(limits, category_id)
         result.append({
             "id": category_id,
             "label": entry.get("label") or builtin.get("label") or category_id.capitalize(),
             "emoji": entry.get("emoji") or builtin.get("emoji") or "⭐",
-            "minutes": entry.get("minutes"),
+            "minutes": (categories.get(pool) or {}).get("minutes"),
+            "pool": pool,
         })
     return result
+
+
+def pooled_seconds(limits, usage_categories, pool):
+    """Segundos usados por todas as categorias que dividem o limite `pool`."""
+    return sum(
+        seconds for category_id, seconds in (usage_categories or {}).items()
+        if category_pool(limits, category_id) == pool
+    )
 
 
 def tile_category(profile, tile_id):
@@ -297,7 +337,8 @@ def compute_status(profile, usage_entry, active=None, now=None):
     exhausted_ids = set()
     for definition in category_definitions(limits):
         used = usage_entry.get("categories", {}).get(definition["id"], 0.0)
-        own_remaining = _remaining(definition["minutes"], used) if enabled else None
+        pool_used = pooled_seconds(limits, usage_entry.get("categories", {}), definition["pool"])
+        own_remaining = _remaining(definition["minutes"], pool_used) if enabled else None
         effective = own_remaining
         if total_remaining is not None:
             effective = total_remaining if effective is None else min(effective, total_remaining)
@@ -307,6 +348,7 @@ def compute_status(profile, usage_entry, active=None, now=None):
         categories.append({
             **definition,
             "usedSeconds": int(used),
+            "poolUsedSeconds": int(pool_used),
             "remainingSeconds": None if own_remaining is None else max(0, own_remaining),
             "availableSeconds": None if effective is None else max(0, effective),
             "exhausted": exhausted,
@@ -340,8 +382,9 @@ def compute_status(profile, usage_entry, active=None, now=None):
                 remaining, limited_by = max(0, total_remaining), "total"
         alternatives = []
         if enabled and limited_by == "category":
+            own_pool = cat["pool"] if cat else category_id
             for other in categories:
-                if other["id"] == category_id or other["exhausted"]:
+                if other["id"] == category_id or other["exhausted"] or other["pool"] == own_pool:
                     continue
                 alternatives.append({
                     "id": other["id"],
@@ -533,9 +576,10 @@ class UsageTracker:
         if total is not None:
             overs.append(entry.get("totalSeconds", 0) - total * 60)
         category = self.active.get("category")
-        cat_limit = (limits.get("categories", {}).get(category) or {}).get("minutes") if category else None
+        pool = category_pool(limits, category) if category else None
+        cat_limit = (limits.get("categories", {}).get(pool) or {}).get("minutes") if pool else None
         if cat_limit is not None:
-            overs.append(entry.get("categories", {}).get(category, 0) - cat_limit * 60)
+            overs.append(pooled_seconds(limits, entry.get("categories", {}), pool) - cat_limit * 60)
         return max(overs) if overs else 0
 
     def _remember_expiry(self, status):

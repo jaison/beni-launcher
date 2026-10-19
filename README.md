@@ -1,7 +1,7 @@
 # Beni Launcher
 
 Um menu infantil em tela cheia para notebooks antigos com Linux, pensado para crianças de 5 a 8 anos.
-Ao ligar o notebook, a criança vê **"O que você quer fazer? 📚 Aprender / 🎮 Jogar"**, escolhe, e só
+Ao ligar o notebook, a criança vê **"O que você quer fazer? 📚 Aprender / 🎨 Passatempo / 🎮 Jogar"**, escolhe, e só
 encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário por categoria**.
 
 ![Tela inicial](beni/prints/01-escolha-beni.png)
@@ -19,7 +19,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
 ## O que mudou em relação ao original
 
 ### Para as crianças
-- **Tela inicial "Aprender / Jogar"**: cartões grandes, cada um com uma barrinha e "faltam 18 min". A lista mostra só a categoria escolhida, com botão **⬅ Voltar** (ou Esc). Quando a categoria esgota, o cartão fica cinza com 🔒 "Amanhã tem mais!".
+- **Tela inicial "Aprender / Passatempo / Jogar"**: cartões grandes (Passatempo = desenhar, colorir e jogos educativos, dividindo o tempo com os Jogos), cada um com uma barrinha e "faltam 18 min". A lista mostra só a categoria escolhida, com botão **⬅ Voltar** (ou Esc). Quando a categoria esgota, o cartão fica cinza com 🔒 "Amanhã tem mais!".
 - **Limite de tempo diário por categoria**: por exemplo, 60 min por dia, sendo 30 de jogos e 30 de atividades educativas.
   - Medidores verde/amarelo/vermelho no launcher e o tempo restante ao lado do ❌ durante o jogo.
   - Nos **10 segundos finais** aparece uma contagem grande ("Seu tempo de jogos está acabando! 8…"), com a sugestão do que ainda dá para fazer ("Você ainda pode brincar de Aprender (18 min)").
@@ -40,7 +40,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
 - **Coleções do itch.io**: cada criança tem uma coleção pública no itch.io. Jogo que você adiciona na coleção vira ícone, com a capa, no perfil da criança, e jogo removido some. A sincronização roda no login e a cada 30 min. Os pais testam o jogo antes e só então distribuem.
 - Em Pais → Tempo de tela → **Limite diário por categoria** você define os minutos (também diferentes em cada dia da semana, por exemplo mais jogo no fim de semana), escolhe a categoria de cada app e zera o tempo do dia.
 - **Internet com filtro**: o notebook usa o DNS CleanBrowsing Family em qualquer Wi‑Fi. Sites adultos, proxies e VPNs ficam bloqueados, e a Busca Segura do Google e o Modo Restrito do YouTube são obrigatórios.
-- Em Pais → Aparência → **Tela inicial** você liga ou desliga a pergunta Aprender/Jogar em cada perfil.
+- Em Pais → Aparência → **Tela inicial** você liga ou desliga a pergunta Aprender/Passatempo/Jogar em cada perfil.
 - A prévia da aparência mostra o visual dos temas novos e as capas dos jogos.
 
 ### Correções para notebooks antigos e jogos "rebeldes"
@@ -94,7 +94,7 @@ Em Mint Cinnamon/MATE quase tudo funciona, mas os ajustes de barra/bloqueio são
 3. Saia da sessão e entre de novo. O launcher abre sozinho.
 4. **Antes de entregar** para a criança:
    - **Pais → Sistema: crie o PIN dos pais.** Sem PIN, qualquer um entra no painel, sai do modo infantil ou zera o tempo.
-   - Ajuste nomes, temas e limites em Pais. A configuração inicial traz dois perfis de exemplo, com os apps já separados em Jogos/Aprender.
+   - Ajuste nomes, temas e limites em Pais. A configuração inicial traz dois perfis de exemplo, com os apps já separados em Aprender/Passatempo/Jogos.
    - Luanti: abra uma vez e instale o jogo **Mineclonia** (Conteúdo → Procurar).
    - Coloque seus jogos de SNES/PS1 em `~/Jogos/SNES` e `~/Jogos/PS1`. A BIOS do PS1 vai em `~/Jogos/PS1/BIOS` (veja `~/Jogos/LEIA-ME.txt`).
    - Troque as coleções do itch.io em `~/.config/cozy-kids-launcher/itch-colecoes.json`. O arquivo liga o **id do perfil** à URL pública da coleção.
@@ -121,7 +121,7 @@ login → ~/.config/autostart → cozy-iniciar
 |---|---|
 | `src/` | código do launcher (original + mudanças) → `~/.local/share/cozy-kids-launcher` |
 | `src/usage_limits.py`, `src/frontend/usage-limits.*` | limites por categoria |
-| `src/frontend/escolha.*` | tela Aprender/Jogar |
+| `src/frontend/escolha.*` | tela Aprender/Passatempo/Jogar |
 | `src/frontend/cozy-temas.css`, `themes/*.svg`, `themes/fonts/` | temas novos |
 | `src/frontend/locales/pt.json` | tradução |
 | `beni/bin/` | atalhos dos apps, `cozy-itch-sync`, `navegador-jogos`, `cozy-iniciar` … → `~/.local/bin` |

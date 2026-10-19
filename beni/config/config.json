@@ -41,7 +41,7 @@
             "special:external-browser:https://kleki.com/"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "autodraw",
@@ -51,7 +51,7 @@
             "special:external-browser:https://www.autodraw.com/"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "colorir",
@@ -61,7 +61,7 @@
             "special:external-browser:https://colorir-online.com/"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "games",
@@ -71,7 +71,7 @@
             "gcompris"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "scratch",
@@ -145,7 +145,7 @@
             "pingus"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "hexahop",
@@ -155,7 +155,7 @@
             "hex-a-hop"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "klotski",
@@ -165,7 +165,7 @@
             "klotski"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "blockly",
@@ -215,7 +215,7 @@
             "special:external-browser:https://musiclab.chromeexperiments.com/?lang=pt-BR"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "rb-arena",
@@ -462,6 +462,10 @@
           },
           "educativo": {
             "minutes": 30
+          },
+          "passatempo": {
+            "minutes": null,
+            "pool": "jogos"
           }
         }
       }
@@ -540,7 +544,7 @@
             "special:external-browser:https://kleki.com/"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "autodraw",
@@ -550,7 +554,7 @@
             "special:external-browser:https://www.autodraw.com/"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "colorir",
@@ -560,7 +564,7 @@
             "special:external-browser:https://colorir-online.com/"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "games",
@@ -570,7 +574,7 @@
             "gcompris"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "scratch",
@@ -644,7 +648,7 @@
             "pingus"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "hexahop",
@@ -654,7 +658,7 @@
             "hex-a-hop"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "klotski",
@@ -664,7 +668,7 @@
             "klotski"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "blockly",
@@ -714,7 +718,7 @@
             "special:external-browser:https://musiclab.chromeexperiments.com/?lang=pt-BR"
           ],
           "visible": true,
-          "category": "educativo"
+          "category": "passatempo"
         },
         {
           "id": "rb-arena",
@@ -961,6 +965,10 @@
           },
           "educativo": {
             "minutes": 30
+          },
+          "passatempo": {
+            "minutes": null,
+            "pool": "jogos"
           }
         }
       }

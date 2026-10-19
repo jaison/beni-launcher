@@ -1,12 +1,20 @@
-// Tela de escolha "O que você quer fazer?" (📚 Aprender / 🎮 Jogar).
+// Tela de escolha "O que você quer fazer?" (📚 Aprender / 🎨 Passatempo / 🎮 Jogar).
 // Depois da escolha, a grade (launcher-ui.js) mostra só os tiles da categoria.
 // Os tempos vêm de /api/usage/status (usage-limits.js: usageStatus, usageCategory...).
 const ESCOLHA_RETORNO_KEY='cozyEscolhaRetornoV1';
 const ESCOLHA_RETORNO_VALIDADE_MS=6*60*60*1000;
 const ESCOLHA_OPCOES=[
   {id:'educativo',titulo:'Aprender',emoji:'📚',lista:'Aprender'},
+  {id:'passatempo',titulo:'Passatempo',emoji:'🎨',lista:'Passatempo'},
   {id:'jogos',titulo:'Jogar',emoji:'🎮',lista:'Jogar'}
 ];
+// Passatempo só aparece se o perfil tiver essa categoria (nos limites ou em algum tile).
+function escolhaTemPassatempo(){
+  if(typeof usageStatus==='undefined'||!usageStatus) return false;
+  if((usageStatus.categories||[]).some(c=>c.id==='passatempo')) return true;
+  return Object.values(usageStatus.tileCategories||{}).includes('passatempo');
+}
+function escolhaOpcoes(){ return ESCOLHA_OPCOES.filter(o=>o.id!=='passatempo'||escolhaTemPassatempo()); }
 let escolhaModo=null;      // null = tela de escolha; 'educativo' | 'jogos' = lista filtrada
 let escolhaPerfil=null;    // perfil para o qual a escolha vale
 let escolhaAssinatura='';  // evita redesenhar sem necessidade a cada poll de uso
@@ -18,7 +26,7 @@ function escolhaSincronizarPerfil(){
 }
 function escolhaNaTela(){ if(!escolhaHabilitada()) return false; escolhaSincronizarPerfil(); return !escolhaModo; }
 function escolhaNaLista(){ if(!escolhaHabilitada()) return false; escolhaSincronizarPerfil(); return !!escolhaModo; }
-function escolhaOpcao(id){ return ESCOLHA_OPCOES.find(o=>o.id===id)||null; }
+function escolhaOpcao(id){ return escolhaOpcoes().find(o=>o.id===id)||null; }
 
 // Categoria efetiva: o servidor já aplica a regra padrão de usage_limits.py
 // para tiles sem o campo "category" (usageStatus.tileCategories).
@@ -27,11 +35,13 @@ function escolhaCategoriaDoTile(tile){
   if(mapa&&Object.prototype.hasOwnProperty.call(mapa,tile.id)) return mapa[tile.id]||'';
   return tile.category||'';
 }
-// "Aprender" = categoria educativo; "Jogar" = todo o resto (jogos, sem categoria, outras).
+// "Aprender" = educativo; "Passatempo" = passatempo; "Jogar" = todo o resto (jogos, sem categoria, outras).
 function escolhaTileNaLista(tile){
   if(!escolhaNaLista()) return true;
   const categoria=escolhaCategoriaDoTile(tile);
-  return escolhaModo==='educativo'?categoria==='educativo':categoria!=='educativo';
+  if(escolhaModo==='educativo'||escolhaModo==='passatempo') return categoria===escolhaModo;
+  const proprias=escolhaTemPassatempo()?['educativo','passatempo']:['educativo'];
+  return !proprias.includes(categoria);
 }
 
 // Tempo da categoria: {comTempo, esgotada, restante (s), limite (s)}
@@ -79,14 +89,15 @@ function renderEscolha(grid){
   document.body.classList.toggle('escolha-ativa',naTela);
   escolhaAtualizarBarra();
   if(!naTela) return false;
-  grid.className='grid escolha-grid';
+  const opcoes=escolhaOpcoes();
+  grid.className='grid escolha-grid escolha-n'+opcoes.length;
   const pergunta=document.createElement('h1');
   pergunta.className='escolha-pergunta';
   pergunta.setAttribute('aria-level','2');
   pergunta.textContent='O que você quer fazer?';
   grid.appendChild(pergunta);
-  ESCOLHA_OPCOES.forEach((opcao,i)=>grid.appendChild(escolhaBotao(opcao,i)));
-  if(focusedTileIndex>=ESCOLHA_OPCOES.length) focusedTileIndex=0;
+  opcoes.forEach((opcao,i)=>grid.appendChild(escolhaBotao(opcao,i)));
+  if(focusedTileIndex>=opcoes.length) focusedTileIndex=0;
   updateTileFocus(escolhaPodeFocar());
   escolhaAssinatura=escolhaCalcularAssinatura();
   return true;
@@ -151,7 +162,7 @@ function escolhaEntrar(id){
 }
 function escolhaVoltar(){
   if(!escolhaNaLista()) return;
-  const anterior=ESCOLHA_OPCOES.findIndex(o=>o.id===escolhaModo);
+  const anterior=escolhaOpcoes().findIndex(o=>o.id===escolhaModo);
   escolhaModo=null;
   cfg.currentPage=0;
   focusedTileIndex=Math.max(0,anterior);
@@ -195,7 +206,7 @@ function escolhaAtualizarBarra(){
 }
 
 function escolhaCalcularAssinatura(){
-  const partes=ESCOLHA_OPCOES.map(o=>{ const t=escolhaTempo(o.id); return [o.id,t.comTempo,t.esgotada,t.comTempo?usageMinutes(t.restante):'',t.limite].join(':'); });
+  const partes=escolhaOpcoes().map(o=>{ const t=escolhaTempo(o.id); return [o.id,t.comTempo,t.esgotada,t.comTempo?usageMinutes(t.restante):'',t.limite].join(':'); });
   const mapa=typeof usageStatus!=='undefined'&&usageStatus&&usageStatus.tileCategories;
   partes.push(mapa?JSON.stringify(mapa):'');
   return partes.join('|');
