@@ -44,6 +44,26 @@
           "category": "educativo"
         },
         {
+          "id": "autodraw",
+          "label": "Autodraw",
+          "emoji": "✏️",
+          "cmd": [
+            "special:external-browser:https://www.autodraw.com/"
+          ],
+          "visible": true,
+          "category": "educativo"
+        },
+        {
+          "id": "colorir",
+          "label": "Colorir",
+          "emoji": "🖍️",
+          "cmd": [
+            "special:external-browser:https://colorir-online.com/"
+          ],
+          "visible": true,
+          "category": "educativo"
+        },
+        {
           "id": "games",
           "label": "Jogos educativos",
           "emoji": "🧩",
@@ -518,6 +538,26 @@
           "emoji": "🎨",
           "cmd": [
             "special:external-browser:https://kleki.com/"
+          ],
+          "visible": true,
+          "category": "educativo"
+        },
+        {
+          "id": "autodraw",
+          "label": "Autodraw",
+          "emoji": "✏️",
+          "cmd": [
+            "special:external-browser:https://www.autodraw.com/"
+          ],
+          "visible": true,
+          "category": "educativo"
+        },
+        {
+          "id": "colorir",
+          "label": "Colorir",
+          "emoji": "🖍️",
+          "cmd": [
+            "special:external-browser:https://colorir-online.com/"
           ],
           "visible": true,
           "category": "educativo"

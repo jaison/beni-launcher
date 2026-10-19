@@ -7,3 +7,32 @@
     display: none !important;
   }
 }
+
+/* Colorir Online (tile "Colorir"): só a parte de colorir. Sem a barra de cima
+   (Apps, Quem somos, Idiomas), rodapé, banners de outros sites de jogos,
+   redes sociais, lojas de apps e espaços de anúncio. */
+@-moz-document domain("colorir-online.com") {
+  header, .oxy-header-wrapper, footer,
+  section.publi-celu-336, section.descripcion-seccion,
+  #banner_izquierdo, #banner_inferior, #banner_derecho, ins.adsbygoogle,
+  section:not(.seccion-inicio):has(a[href*="acorujaboo"], a[href*="elbuhoboo"], a[href*="ecokids"],
+    a[href*="tiktok.com"], a[href*="instagram.com"], a[href*="youtube.com"], a[href*="facebook.com"],
+    a[href*="apps.apple.com"], a[href*="play.google.com"]),
+  a[href^="http"]:not([href*="colorir-online.com"]) {
+    display: none !important;
+  }
+  /* o rodapé sumiu: o fundo azul do site vai até o fim da tela */
+  html, body { background: #afddea !important; min-height: 100vh; }
+}
+
+/* AutoDraw (tile "Autodraw"): sem Share (publica o desenho), Artists, About e
+   links que abrem outros sites. Ordem do menu: Start over, Download, Share,
+   How-To, Shortcuts, Artists, About. */
+@-moz-document domain("autodraw.com") {
+  #main-menu > ul > li:nth-child(3),
+  #main-menu > ul > li:nth-child(6),
+  #main-menu > ul > li:nth-child(7),
+  #main-menu footer, #aix-link, #terms-link, a[target="_blank"] {
+    display: none !important;
+  }
+}

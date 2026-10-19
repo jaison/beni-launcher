@@ -7,7 +7,11 @@
         "*://www.escolagames.com.br/diversao/*",
         "*://escolagames.com.br/diversao/*",
         "*://www.bestschoolgames.com/*",
-        "*://bestschoolgames.com/*"
+        "*://bestschoolgames.com/*",
+        "*://colorir-online.com/apps*",
+        "*://www.colorir-online.com/apps*",
+        "*://colorir-online.com/quem-somos*",
+        "*://www.colorir-online.com/quem-somos*"
       ]
     },
     "3rdparty": {
