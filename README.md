@@ -24,7 +24,9 @@ Cada cartão mostra quanto tempo ainda resta hoje.
 > - **Logins automáticos.** Ele não precisa decorar e-mail e senha para entrar no Khan Academy ou no Teach Your Monster.
 > - **Regras de tempo.** Tempo certo para aprender, para passatempos e para jogar. E o tempo de jogo depende de ele ter feito a parte de aprender.
 >
-> No caminho, o projeto ganhou um segundo perfil (a Bea, de 5 anos), temas, emuladores e muitas
+> No caminho, o projeto ganhou um segundo perfil, da minha sobrinha **Bea**, de 5 anos. Para ela
+> vieram jogos mais voltados para meninas (vestir, maquiagem, bonecas, cozinhar) e temas próprios
+> (Reino do Gelo, Casinha Mágica e Castelo Encantado). Vieram também emuladores e muitas
 > correções para hardware antigo. Está tudo aqui, para quem quiser fazer o mesmo com um notebook
 > esquecido na gaveta.
 
