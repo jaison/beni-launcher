@@ -314,7 +314,7 @@
           "cmd": [
             "special:external-browser:https://studio.code.org/courses?lang=pt-BR"
           ],
-          "visible": true,
+          "visible": false,
           "category": "educativo"
         },
         {
@@ -794,7 +794,7 @@
           "cmd": [
             "special:external-browser:https://studio.code.org/courses?lang=pt-BR"
           ],
-          "visible": true,
+          "visible": false,
           "category": "educativo"
         },
         {

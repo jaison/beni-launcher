@@ -31,7 +31,7 @@ encontra apps, jogos e sites aprovados pelos pais, com **limite de tempo diário
 - **Apps melhores**:
   - GCompris e Tux Paint em versões novas (Flathub);
   - Scratch (TurboWarp), Luanti (parecido com Minecraft), Klavaro (digitação), Klotski, Pingus, Hex-a-hop, SuperTux, Frogatto e Stellarium;
-  - sites educativos em português (Code.org, Khan Academy, PhET, Blockly Games, Escola Games);
+  - sites educativos em português (Khan Academy, PhET, Blockly Games, Escola Games);
   - jogos de vestir/maquiagem/boneca sem anúncios (itch.io).
 - **Super Nintendo e PlayStation**: uma lista de jogos em tela cheia, com capas, que funciona com teclado, mouse ou controle. Usa RetroArch + snes9x e PCSX-Reloaded. Os jogos (ROMs) não vêm incluídos.
 - **Jogos de navegador em tela cheia de verdade**: os jogos do itch.io são ampliados até ocupar a tela, a faixa do Unity com o botão "tela cheia" é escondida e uma tela "Carregando…" cobre a abertura, para não aparecer a área de trabalho piscando.
