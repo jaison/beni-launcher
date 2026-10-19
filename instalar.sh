@@ -60,6 +60,11 @@ mkdir -p "$APP_ROOT/themes/themes" && cp "$REPO"/themes/*.jpg "$APP_ROOT/themes/
 tr -d ' \n' < "$REPO/VERSION" > "$APP_ROOT/version"   # versão deste projeto (Releases vX.Y.Z)
 cp "$REPO/beni/ferramentas/"gerar-temas*.py "$APP_ROOT/themes/"
 
+# Jogo de corrida do Scratch: a cópia da criança fica em Imagens/Scratch (nunca sobrescrita)
+SCRATCH_DIR="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Imagens")/Scratch"
+mkdir -p "$SCRATCH_DIR"
+[[ -f "$SCRATCH_DIR/Pista Turbo.sb3" ]] || cp "$REPO/src/scratch/Pista Turbo.sb3" "$SCRATCH_DIR/"
+
 passo "Comandos em $BIN (atalhos dos apps, sincronização do itch.io etc.)"
 mkdir -p "$BIN"
 for f in "$REPO"/beni/bin/*; do install -m 0755 "$f" "$BIN/$(basename "$f")"; done

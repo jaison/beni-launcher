@@ -1,0 +1,11 @@
+#!/bin/sh
+# Beni Launcher: abre o jogo de corrida "Pista Turbo" no Scratch (TurboWarp).
+# A cópia da criança fica em ~/Imagens/Scratch (o TurboWarp só enxerga essa pasta);
+# se ela sumir, volta a original.
+PASTA="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Imagens")/Scratch"
+JOGO="$PASTA/Pista Turbo.sb3"
+if [ ! -f "$JOGO" ]; then
+  mkdir -p "$PASTA"
+  cp "$HOME/.local/share/cozy-kids-launcher/scratch/Pista Turbo.sb3" "$JOGO"
+fi
+exec cozy-fullscreen turbowarp-desktop flatpak run org.turbowarp.TurboWarp "$JOGO"

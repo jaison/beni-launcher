@@ -1,4 +1,28 @@
 {
   "LEIA-ME": "Mudanças de catálogo que o atualizador aplica UMA vez em cada notebook (beni/ferramentas/migrar-config.py). Para adicionar um jogo/site/app numa atualização: acrescente uma migração aqui com um id novo E coloque o mesmo tile em beni/config/config.json (que é o que um notebook novo recebe). Veja o README, seção 'Publicar uma atualização'.",
-  "migracoes": []
+  "migracoes": [
+    {
+      "id": "2026-10-19-pista-turbo",
+      "descricao": "Jogo de corrida no Scratch (Pista Turbo) no Aprender do Beni",
+      "operacoes": [
+        {
+          "op": "adicionar_tile",
+          "perfis": [
+            "default"
+          ],
+          "depois_de": "scratch",
+          "tile": {
+            "id": "pista-turbo",
+            "label": "Pista Turbo",
+            "emoji": "🏎️",
+            "cmd": [
+              "pista-turbo"
+            ],
+            "visible": true,
+            "category": "educativo"
+          }
+        }
+      ]
+    }
+  ]
 }

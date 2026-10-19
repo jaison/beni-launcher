@@ -104,6 +104,16 @@
           "category": "educativo"
         },
         {
+          "id": "pista-turbo",
+          "label": "Pista Turbo",
+          "emoji": "🏎️",
+          "cmd": [
+            "pista-turbo"
+          ],
+          "visible": true,
+          "category": "educativo"
+        },
+        {
           "id": "luanti",
           "label": "Luanti",
           "emoji": "⛏️",
