@@ -23,7 +23,7 @@ Base: [TrissyGE/cozy-kids-launcher](https://github.com/TrissyGE/cozy-kids-launch
 |---|---|
 | `server.py` | Junta os bloqueios por horário com os bloqueios por limite (motivos `category_limit` e `daily_limit`, campo `limitBlocked`); endpoints `GET /api/usage/status` e `POST /api/usage/reset`; liga o contador ao abrir um tile; idioma `pt`. |
 | `config_validation.py`, `profile_config.py` | Aceitam `tile.category`, `profile.categoryLimits`, `profile.choiceScreenEnabled` e o idioma `pt`. |
-| `overlay.py` | Tempo restante da categoria ao lado do ❌ (com cores), contagem grande nos últimos 10 s, fechamento no 0; reposiciona a janela via X11 quando o jogo a joga para 0,0; textos em pt. |
+| `overlay.py` | Barra redonda e meio transparente (fica opaca com o mouse em cima) com ✕, tempo restante e ✥ para mudar de canto (toque = próximo canto; arrastar = gruda no canto mais perto; lembra o canto de cada app). Em sites, botão "‹ Voltar" separado no canto inferior esquerdo. Tempo restante da categoria (com cores), contagem grande nos últimos 10 s, fechamento no 0; reposiciona a janela via X11 quando o jogo a joga para 0,0; textos em pt. |
 | `timer_watchdog.py`, `browser.html`, `media.html`, `no-media.html` | Textos em pt. O `browser.html` tinha um erro de JS de origem (`'Time's up!'`), corrigido com a tradução. |
 | `speech_feedback.py` | Voz em português (`spd-say -l pt-BR` / `espeak-ng -v pt-br`). |
 | `recommendations.json` | Campos `label_pt`, `name_pt`, `desc_pt`, `hint_pt`. |

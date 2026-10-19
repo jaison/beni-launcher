@@ -186,9 +186,9 @@ def focus_launcher():
 
 # Faixas de cor do tempo restante (verde -> amarelo -> vermelho).
 USAGE_COLORS = {
-    "ok": {"bg": "#e8f5e9", "fg": "#1b5e20", "bar": "#43a047"},
-    "warn": {"bg": "#fff8e1", "fg": "#7a5200", "bar": "#f9a825"},
-    "low": {"bg": "#ffebee", "fg": "#b71c1c", "bar": "#e53935"},
+    "ok": {"bg": "#e8f5e9", "fg": "#1b5e20", "bar": "#43a047", "pill_fg": "#86efac"},
+    "warn": {"bg": "#fff8e1", "fg": "#7a5200", "bar": "#f9a825", "pill_fg": "#fde047"},
+    "low": {"bg": "#ffebee", "fg": "#b71c1c", "bar": "#e53935", "pill_fg": "#fca5a5"},
 }
 COUNTDOWN_SECONDS = 10
 
@@ -223,46 +223,200 @@ def tile_is_blocked(status, tile_id):
     return status.get("profileAllowed") is False or tile_id in blocked
 
 
+# Visual da barrinha (❌ + tempo): pílula escura, meio transparente.
+PILL_BG = "#1f2937"
+PILL_ALPHA_IDLE = 0.6
+PILL_ALPHA_HOVER = 1.0
+PILL_FONT = "Ubuntu"
+BUTTON_SIZE = 46
+CORNER_MARGIN = 14
+CORNERS = ("tl", "tr", "br", "bl")  # ordem do toque em ✥ (sentido horário)
+CORNER_FILE = os.path.join(CACHE_DIR, "overlay-corner.json")
+
+
+def load_corner(tile_id):
+    try:
+        with open(CORNER_FILE, encoding="utf-8") as handle:
+            corner = json.load(handle).get(tile_id or "_", "tl")
+    except (OSError, ValueError, AttributeError):
+        corner = "tl"
+    return corner if corner in CORNERS else "tl"
+
+
+def save_corner(tile_id, corner):
+    try:
+        with open(CORNER_FILE, encoding="utf-8") as handle:
+            data = json.load(handle)
+        if not isinstance(data, dict):
+            data = {}
+    except (OSError, ValueError):
+        data = {}
+    data[tile_id or "_"] = corner
+    try:
+        with open(CORNER_FILE, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+    except OSError:
+        pass
+
+
+def corner_position(corner, width, height, screen_w, screen_h, margin=CORNER_MARGIN):
+    x = margin if corner in ("tl", "bl") else screen_w - width - margin
+    y = margin if corner in ("tl", "tr") else screen_h - height - margin
+    return max(0, x), max(0, y)
+
+
+def nearest_corner(center_x, center_y, screen_w, screen_h):
+    left = center_x < screen_w / 2
+    top = center_y < screen_h / 2
+    return {(True, True): "tl", (False, True): "tr", (False, False): "br", (True, False): "bl"}[(left, top)]
+
+
+def process_tree(root_pid):
+    """PIDs do processo e de todos os descendentes (lido de /proc)."""
+    children = {}
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/stat", encoding="utf-8") as handle:
+                stat = handle.read()
+            ppid = int(stat[stat.rindex(")") + 2:].split()[1])
+        except (OSError, ValueError, IndexError):
+            continue
+        children.setdefault(ppid, []).append(int(entry))
+    result, pending = [], [int(root_pid)]
+    while pending:
+        pid = pending.pop()
+        result.append(pid)
+        pending.extend(children.get(pid, []))
+    return result
+
+
+def rounded_rectangles(width, height, radius):
+    """Retângulos (x, y, w, h) que formam um retângulo de cantos redondos."""
+    radius = max(0, min(radius, width // 2, height // 2))
+    rects = []
+    for row in range(radius):
+        dy = radius - row - 0.5
+        inset = int(round(radius - (radius * radius - dy * dy) ** 0.5))
+        rects.append((inset, row, width - 2 * inset, 1))
+        rects.append((inset, height - row - 1, width - 2 * inset, 1))
+    rects.append((0, radius, width, height - 2 * radius))
+    return rects
+
+
+class _XRectangle(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_short), ("y", ctypes.c_short),
+                ("width", ctypes.c_ushort), ("height", ctypes.c_ushort)]
+
+
+def shape_window_rounded(window, width, height, radius):
+    """Recorta a janela com cantos redondos (extensão X Shape). Falha em silêncio."""
+    try:
+        if not os.environ.get("DISPLAY"):
+            return False
+        xlib = ctypes.CDLL("libX11.so.6")
+        xext = ctypes.CDLL("libXext.so.6")
+        xlib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+        xlib.XOpenDisplay.restype = ctypes.c_void_p
+        xlib.XFlush.argtypes = [ctypes.c_void_p]
+        xlib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+        xext.XShapeCombineRectangles.argtypes = [
+            ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+            ctypes.POINTER(_XRectangle), ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ]
+        rects = rounded_rectangles(int(width), int(height), int(radius))
+        array = (_XRectangle * len(rects))(*[_XRectangle(*r) for r in rects])
+        display = xlib.XOpenDisplay(None)
+        if not display:
+            return False
+        try:
+            # ShapeBounding=0, ShapeSet=0, Unsorted=0
+            raiser = X11WindowRaiser()
+            try:
+                target = raiser._top_level(x11_toplevel_id(window)) if raiser.display else x11_toplevel_id(window)
+            finally:
+                raiser.close()
+            xext.XShapeCombineRectangles(display, ctypes.c_ulong(target),
+                                         0, 0, 0, array, len(rects), 0, 0)
+            xlib.XFlush(display)
+        finally:
+            xlib.XCloseDisplay(display)
+        return True
+    except (OSError, AttributeError, tk.TclError, ValueError):
+        return False
+
+
+class RoundButton(tk.Canvas):
+    """Botão redondo desenhado num Canvas (o tk.Button não arredonda)."""
+
+    def __init__(self, parent, glyph, fill, fg, hover, command=None, size=BUTTON_SIZE, font_size=20):
+        super().__init__(parent, width=size, height=size, bg=PILL_BG,
+                         highlightthickness=0, bd=0, cursor="hand2")
+        self.fill, self.hover = fill, hover
+        self.oval = self.create_oval(2, 2, size - 2, size - 2, fill=fill, outline="")
+        self.create_text(size / 2, size / 2 - 1, text=glyph, fill=fg,
+                         font=(PILL_FONT, font_size, "bold"))
+        self.command = command
+        self.bind("<Enter>", lambda _e: self.itemconfig(self.oval, fill=self.hover), add="+")
+        self.bind("<Leave>", lambda _e: self.itemconfig(self.oval, fill=self.fill), add="+")
+        if command is not None:
+            self.bind("<ButtonRelease-1>", self._release, add="+")
+
+    def _release(self, event):
+        # Só conta o clique se o dedo/mouse ainda estiver em cima do botão.
+        if 0 <= event.x <= self.winfo_width() and 0 <= event.y <= self.winfo_height():
+            self.command()
+
+
 class AppOverlay:
     def __init__(self, mode, url, label, tile_id=""):
         self.mode = mode
         self.url = url
         self.label = label
         self.tile_id = tile_id
-        self.hide_after_ms = 2000
+        self.corner = load_corner(tile_id)
+        self.shape_size = None
+        self.drag_start = None
+        self.dragging = False
+        self.idle_job = None
 
         self.root = tk.Tk()
         self.root.title("App Overlay")
         self.root.overrideredirect(True)
-        self.root.geometry("220x70+24+24")
+        self.root.configure(bg=PILL_BG)
+        self.root.geometry("120x60+14+14")
         self.root.resizable(False, False)
         configure_overlay_window(self.root)
         self.root.focus_force()
         self.x11_raiser = X11WindowRaiser()
+        self.set_alpha(PILL_ALPHA_IDLE)
 
-        self.frame = tk.Frame(self.root, bg=THEME["bg"], bd=0)
+        self.frame = tk.Frame(self.root, bg=PILL_BG, bd=0, padx=6, pady=6)
         self.frame.pack(fill=tk.BOTH, expand=True)
 
-        self.close_btn = tk.Button(
-            self.frame, text="❌", font=("system-ui", 16, "bold"),
-            bg=THEME["close_bg"], fg=THEME["close_fg"], bd=0,
-            width=2, height=1, cursor="hand2", command=self.on_close,
-        )
-        self.close_btn.pack(side=tk.LEFT, padx=8, pady=8)
+        # ‹ Voltar: só em sites (é o Alt+← do navegador), sempre no canto inferior esquerdo
+        self.back_window = None
+        if mode == "external":
+            self.back_window = self.build_back_window()
+        self.close_btn = RoundButton(self.frame, "✕", "#ef4444", "#ffffff", "#f87171",
+                                     command=self.on_close)
+        self.close_btn.pack(side=tk.LEFT, padx=3)
 
-        self.timer_lbl = tk.Label(
-            self.frame, text="", font=("system-ui", 14, "bold"),
-            bg=THEME["bg"], fg=THEME["timer_text"],
-        )
-        self.timer_lbl.pack(side=tk.LEFT, padx=4, pady=8)
+        self.timer_lbl = tk.Label(self.frame, text="", font=(PILL_FONT, 15, "bold"),
+                                  bg=PILL_BG, fg="#f9fafb", padx=6)
 
-        # Bind motion/enter on root, frame, and button for robustness
-        for widget in (self.root, self.frame, self.close_btn):
-            widget.bind("<Motion>", self.on_motion)
-            widget.bind("<Enter>", self.on_motion)
+        self.move_btn = RoundButton(self.frame, "✥", "#374151", "#d1d5db", "#4b5563",
+                                    size=34, font_size=16)
+        self.move_btn.pack(side=tk.RIGHT, padx=(3, 1))
 
-        self.hide_timer = None
-        self.reset_hide_timer()
+        # Arrastar pela barra (tempo ou ✥); tocar no ✥ muda de canto.
+        for widget in (self.frame, self.timer_lbl, self.move_btn):
+            widget.bind("<ButtonPress-1>", self.on_drag_start, add="+")
+            widget.bind("<B1-Motion>", self.on_drag_motion, add="+")
+            widget.bind("<ButtonRelease-1>", self.on_drag_end, add="+")
+        self.root.bind("<Enter>", self.on_enter, add="+")
+        self.root.bind("<Leave>", self.on_leave, add="+")
 
         # Limites diários por categoria
         self.usage_active = None
@@ -274,6 +428,7 @@ class AppOverlay:
         self.countdown_position = None
         self.closing = False
 
+        self.place()
         self.root.after(0, self.poll_process)
         self.root.after(0, self.poll_timer)
         self.root.after(200, self.poll_usage)
@@ -288,6 +443,9 @@ class AppOverlay:
             # Tk still reports the topmost attribute. Raise only this overlay's
             # own XID directly; no global window lookup or extra tool is needed.
             self.x11_raiser.raise_window(x11_toplevel_id(self.root))
+            if self.back_window is not None:
+                self.back_window.lift()
+                self.back_window.attributes("-topmost", True)
             if self.countdown_window is not None:
                 # Alguns apps em tela cheia fazem o WM jogar a janela para 0,0.
                 # (o Tux Paint, p.ex.) — por isso movemos direto pelo X11.
@@ -303,33 +461,149 @@ class AppOverlay:
             pass
         self.root.after(500, self.stay_on_top)
 
-    def reset_hide_timer(self):
-        if self.hide_timer:
-            self.root.after_cancel(self.hide_timer)
-        self.show_full()
-        self.hide_timer = self.root.after(self.hide_after_ms, self.show_minimal)
+    # ----- aparência e posição -----
+    def set_alpha(self, value):
+        try:
+            self.root.attributes("-alpha", value)
+        except tk.TclError:
+            pass
 
-    def show_full(self):
-        self.timer_lbl.pack(side=tk.LEFT, padx=4, pady=8)
-        self._fit_geometry(70, 220)
+    def on_enter(self, _event=None):
+        if self.idle_job:
+            self.root.after_cancel(self.idle_job)
+            self.idle_job = None
+        self.set_alpha(PILL_ALPHA_HOVER)
 
-    def show_minimal(self):
-        # Hide timer label but keep close button visible and fully opaque.
-        # Com limite por categoria o tempo restante continua sempre visível.
-        if self.usage_label:
-            self.timer_lbl.pack(side=tk.LEFT, padx=4, pady=8)
-            self._fit_geometry(60, 60)
-            return
-        self.timer_lbl.pack_forget()
-        self.root.geometry("60x60+24+24")
+    def on_leave(self, _event=None):
+        if self.idle_job:
+            self.root.after_cancel(self.idle_job)
+        self.idle_job = self.root.after(1200, lambda: self.set_alpha(PILL_ALPHA_IDLE))
 
-    def _fit_geometry(self, height, minimum):
+    def build_back_window(self):
+        window = tk.Toplevel(self.root)
+        window.overrideredirect(True)
+        window.configure(bg=PILL_BG)
+        configure_overlay_window(window)
+        try:
+            window.attributes("-alpha", PILL_ALPHA_IDLE)
+        except tk.TclError:
+            pass
+        box = tk.Frame(window, bg=PILL_BG, padx=6, pady=6, cursor="hand2")
+        box.pack(fill=tk.BOTH, expand=True)
+        arrow = RoundButton(box, "‹", "#e5e7eb", "#111827", "#ffffff", font_size=26)
+        arrow.pack(side=tk.LEFT)
+        text = tk.Label(box, text="Voltar", font=(PILL_FONT, 15, "bold"), bg=PILL_BG,
+                        fg="#f9fafb", padx=8, cursor="hand2")
+        text.pack(side=tk.LEFT)
+
+        def release(event):
+            widget = event.widget
+            if 0 <= event.x <= widget.winfo_width() and 0 <= event.y <= widget.winfo_height():
+                self.on_back()
+
+        def alpha(value):
+            try:
+                window.attributes("-alpha", value)
+            except tk.TclError:
+                pass
+
+        for widget in (box, arrow, text):
+            widget.bind("<ButtonRelease-1>", release, add="+")
+        window.bind("<Enter>", lambda _e: alpha(PILL_ALPHA_HOVER), add="+")
+        window.bind("<Leave>", lambda _e: window.after(1200, lambda: alpha(PILL_ALPHA_IDLE)), add="+")
+        window.update_idletasks()
+        width, height = box.winfo_reqwidth(), box.winfo_reqheight()
+        x, y = corner_position("bl", width, height, window.winfo_screenwidth(), window.winfo_screenheight())
+        window.geometry(f"{width}x{height}+{x}+{y}")
+        self.back_height = height
+        window.update_idletasks()
+        shape_window_rounded(window, width, height, height // 2)
+        return window
+
+    def size(self):
         try:
             self.root.update_idletasks()
-            width = max(minimum, self.frame.winfo_reqwidth() + 8)
+            return self.frame.winfo_reqwidth(), self.frame.winfo_reqheight()
         except tk.TclError:
-            width = minimum
-        self.root.geometry(f"{width}x{height}+24+24")
+            return 120, 60
+
+    def place(self):
+        width, height = self.size()
+        x, y = corner_position(self.corner, width, height,
+                               self.root.winfo_screenwidth(), self.root.winfo_screenheight())
+        if self.corner == "bl" and self.back_window is not None:
+            y -= self.back_height + 10  # fica logo acima do ‹ Voltar
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        if self.shape_size != (width, height):
+            self.root.update_idletasks()
+            if shape_window_rounded(self.root, width, height, height // 2):
+                self.shape_size = (width, height)
+
+    def set_timer_text(self, text, fg="#f9fafb"):
+        if text:
+            self.timer_lbl.config(text=text, fg=fg)
+            if not self.timer_lbl.winfo_ismapped():
+                self.timer_lbl.pack(side=tk.LEFT, padx=(4, 2))
+        else:
+            self.timer_lbl.config(text="")
+            self.timer_lbl.pack_forget()
+        self.place()
+
+    def on_drag_start(self, event):
+        self.drag_start = (event.x_root, event.y_root,
+                           self.root.winfo_rootx(), self.root.winfo_rooty())
+        self.dragging = False
+
+    def on_drag_motion(self, event):
+        if not self.drag_start:
+            return
+        sx, sy, wx, wy = self.drag_start
+        dx, dy = event.x_root - sx, event.y_root - sy
+        if not self.dragging and abs(dx) + abs(dy) < 10:
+            return
+        self.dragging = True
+        self.root.geometry(f"+{wx + dx}+{wy + dy}")
+
+    def on_drag_end(self, event):
+        if not self.drag_start:
+            return
+        if self.dragging:
+            width, height = self.size()
+            self.corner = nearest_corner(self.root.winfo_rootx() + width / 2,
+                                         self.root.winfo_rooty() + height / 2,
+                                         self.root.winfo_screenwidth(),
+                                         self.root.winfo_screenheight())
+        elif event.widget is self.move_btn:
+            self.corner = CORNERS[(CORNERS.index(self.corner) + 1) % len(CORNERS)]
+        else:
+            self.drag_start = None
+            return
+        self.drag_start = None
+        self.dragging = False
+        save_corner(self.tile_id, self.corner)
+        self.place()
+
+    def on_back(self):
+        """Volta uma página no navegador do tile (Alt+←)."""
+        record = owned_process(TILE_PROCESS_PIDFILE, "tile-process")
+        if not record:
+            return
+        windows = []
+        try:
+            for pid in process_tree(record["pid"]):
+                found = subprocess.run(["xdotool", "search", "--onlyvisible", "--pid", str(pid)],
+                                       capture_output=True, text=True, timeout=2)
+                windows.extend(found.stdout.split())
+        except (OSError, subprocess.SubprocessError):
+            return
+        if not windows:
+            return
+        try:
+            subprocess.run(["xdotool", "windowactivate", "--sync", windows[0],
+                            "key", "--clearmodifiers", "alt+Left"],
+                           capture_output=True, timeout=3, check=False)
+        except (OSError, subprocess.SubprocessError):
+            pass
 
     # ----- limites por categoria -----
     def poll_usage(self):
@@ -358,9 +632,7 @@ class AppOverlay:
             self.usage_active = None
             if self.usage_label:
                 self.usage_label = None
-                self.timer_lbl.config(text="", bg=THEME["bg"])
-                self.frame.config(bg=THEME["bg"])
-                self.root.config(bg=THEME["bg"])
+                self.set_timer_text("")
             if self.countdown_window is not None:
                 self.hide_countdown()
         self.root.after(1000, self.poll_usage)
@@ -369,15 +641,9 @@ class AppOverlay:
         band = USAGE_COLORS[usage_band(remaining, active.get("limitSeconds"))]
         emoji = active.get("categoryEmoji") or "⏳"
         text = f"{emoji} {format_remaining(remaining)}"
-        changed = text != self.usage_label
-        self.usage_label = text
-        self.timer_lbl.config(text=text, bg=band["bg"], fg=band["fg"], font=("system-ui", 15, "bold"))
-        self.frame.config(bg=band["bg"])
-        self.root.config(bg=band["bg"])
-        if changed and not self.timer_lbl.winfo_ismapped():
-            self.show_minimal()
-        elif changed:
-            self._fit_geometry(self.root.winfo_height() or 60, 60)
+        if text != self.usage_label:
+            self.usage_label = text
+            self.set_timer_text(text, band["pill_fg"])
 
     def show_countdown(self, active):
         window = tk.Toplevel(self.root)
@@ -449,9 +715,6 @@ class AppOverlay:
         self.countdown_deadline = None
         self.countdown_number = None
 
-    def on_motion(self, event=None):
-        self.reset_hide_timer()
-
     def on_close(self):
         try:
             terminate_owned_process(
@@ -487,13 +750,13 @@ class AppOverlay:
             remaining = data.get("remainingSeconds", 0)
             mins = max(0, remaining // 60)
             if data.get("expired"):
-                self.timer_lbl.config(text="⏰ Acabou o tempo!", fg="#c00")
+                self.set_timer_text("⏰ Acabou!", "#fca5a5")
             elif data.get("warning"):
-                self.timer_lbl.config(text=f"⏱️ {mins} minutos", fg="#e65100")
+                self.set_timer_text(f"⏱️ {mins} min", "#fde047")
             else:
-                self.timer_lbl.config(text=f"⏱️ {mins} minutos", fg=THEME["timer_text"])
-        else:
-            self.timer_lbl.config(text="")
+                self.set_timer_text(f"⏱️ {mins} min")
+        elif self.timer_lbl.cget("text"):
+            self.set_timer_text("")
         self.root.after(10000, self.poll_timer)
 
     def run(self):
