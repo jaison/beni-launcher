@@ -295,11 +295,29 @@ def session_env(user):
 
 
 def start_launcher(user):
+    """Reabre o menu na sessão do usuário.
+
+    Precisa ir para o gerenciador de serviços do usuário (systemd-run --user):
+    um processo aberto daqui ficaria no grupo deste serviço, e o systemd o
+    encerra junto quando o serviço termina.
+    """
     launcher = os.path.join(user.pw_dir, ".local/bin/cozy-kids-launcher")
     if not os.path.exists(f"/run/user/{user.pw_uid}") or not os.path.exists(launcher):
         return  # sem sessão gráfica: abre sozinho no próximo login
+    env = session_env(user)
+    command = [
+        "systemd-run", "--user", f"--machine={user.pw_name}@.host", "--collect", "--quiet",
+        f"--unit=beni-launcher-reaberto-{int(time.time())}",
+        f"--setenv=DISPLAY={env['DISPLAY']}", f"--setenv=XAUTHORITY={env['XAUTHORITY']}",
+        f"--setenv=PATH={env['PATH']}", launcher,
+    ]
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
+    if result.returncode == 0:
+        log("ao vivo: menu reaberto na sessão do usuário")
+        return
+    log(f"ao vivo: systemd-run falhou ({result.stdout.strip()[:200]}); tentando direto")
     subprocess.Popen([RUNUSER, "-u", user.pw_name, "--", "setsid", launcher],
-                     env=session_env(user), stdin=subprocess.DEVNULL,
+                     env=env, stdin=subprocess.DEVNULL,
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
