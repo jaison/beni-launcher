@@ -62,6 +62,16 @@ class LauncherLifecycleTests(unittest.TestCase):
         self.assertNotIn("pgrep", source)
         self.assertNotIn('kill "$(cat "$PIDFILE"', source)
 
+    def test_launcher_drops_xfce_session_manager_before_starting_apps(self):
+        # Firefox travava esperando o xfce4-session aceitar o registro (ICE).
+        for script in (
+            REPOSITORY_ROOT / "src" / "launcher.sh",
+            REPOSITORY_ROOT / "beni" / "bin" / "cozy-kids-launcher",
+        ):
+            lines = script.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(lines[1], "set -euo pipefail")
+            self.assertIn("unset SESSION_MANAGER", lines[:6])
+
     def test_chromium_fullscreen_mode_has_a_scoped_f11_assist_and_safe_fallback(self):
         source = (REPOSITORY_ROOT / "src" / "launcher.sh").read_text(
             encoding="utf-8"

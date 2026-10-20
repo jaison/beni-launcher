@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Sem gerenciamento de sessão do XFCE: o Firefox (e os jogos) tentam se registrar
+# no xfce4-session e, se ele não responde, ficam parados para sempre sem abrir.
+unset SESSION_MANAGER
 if [[ -d /snap/bin ]] && [[ ":$PATH:" != *":/snap/bin:"* ]]; then
   export PATH="$PATH:/snap/bin"
 fi
